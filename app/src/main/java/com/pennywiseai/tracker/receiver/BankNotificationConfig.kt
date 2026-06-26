@@ -2,20 +2,21 @@ package com.pennywiseai.tracker.receiver
 
 import android.app.Notification
 
-/**
- * Configuration and helpers for ingesting bank notifications.
- *
- * Only notifications from the allowed package list are processed for
- * transaction parsing to preserve user privacy.
- */
 object BankNotificationConfig {
 
     private val allowedPackages: Map<String, String> = mapOf(
         // Faysal Bank (Pakistan) – alias must match FaysalBankParser.canHandle()
         "com.avanza.ambitwizfbl" to "FaysalBank",
         // Enpara (Turkey) – alias must match EnparaBankParser.canHandle()
-        "finansbank.enpara" to "Enpara",      // Enpara.com Cep Şubesi (personal, older brand)
-        "com.enparabank.retail" to "Enpara"   // Enpara Bank Cep Şube (personal, post-rebrand)
+        "finansbank.enpara" to "Enpara",
+        "com.enparabank.retail" to "Enpara",
+        // Malaysia — alias must match each parser's canHandle()
+        "co.myboostbank.boostberhad" to "BoostBank",
+        "com.maybank2u.life" to "Maybank2u",
+        "my.com.gxbank.app" to "GXBank",
+        "com.pbb.mypb" to "PublicBank",
+        "my.com.tngdigital.ewallet" to "TNG",
+        "my.rytbank.app" to "RytBank"
     )
 
     fun isAllowed(packageName: String): Boolean =
