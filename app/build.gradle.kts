@@ -40,6 +40,12 @@ android {
     }
 
     signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         // Only create signing config for non-F-Droid builds
         if (!gradle.startParameter.taskNames.any { it.contains("fdroid", ignoreCase = true) }) {
             val localPropertiesFile = rootProject.file("local.properties")
@@ -47,7 +53,7 @@ android {
                 create("release") {
                     val localProperties = Properties()
                     localProperties.load(localPropertiesFile.inputStream())
-                    
+
                     val keystorePath = localProperties.getProperty("RELEASE_STORE_FILE", "")
                     if (keystorePath.isNotEmpty()) {
                         storeFile = file(keystorePath)
@@ -100,6 +106,7 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            signingConfig = signingConfigs.getByName("debug")
         }
         release {
             isMinifyEnabled = true

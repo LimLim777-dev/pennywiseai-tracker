@@ -53,9 +53,10 @@ app/release/
 app/build/outputs/
 RELEASE_NOTES.md
 
-# Keystore files (never commit these!)
+# Keystore files (never commit these — except the shared debug keystore)
 *.jks
 *.keystore
+!app/debug.keystore
 release.properties
 
 *.pem

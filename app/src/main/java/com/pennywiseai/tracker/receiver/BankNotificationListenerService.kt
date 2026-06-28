@@ -6,7 +6,9 @@ import android.util.Log
 import com.pennywiseai.tracker.data.repository.BankNotificationRepository
 import com.pennywiseai.tracker.data.repository.TransactionRepository
 import com.pennywiseai.tracker.data.manager.SmsTransactionProcessor
+import com.pennywiseai.tracker.data.database.entity.TransactionType as EntityTransactionType
 import com.pennywiseai.parser.core.bank.BankParserFactory
+import com.pennywiseai.parser.core.TransactionType as ParsedTransactionType
 import com.pennywiseai.tracker.worker.BankNotificationRetryWorker
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -102,6 +104,24 @@ class BankNotificationListenerService : NotificationListenerService() {
                             notificationRepository.markProcessed(notificationId, null)
                         }
                         return@launch
+                    }
+
+                    // Cross-bank self-transfer: if Boost Bank reports income but another
+                    // bank already logged a TRANSFER of the same amount in the same window,
+                    // reclassify this as TRANSFER (Boost income notifications omit sender name)
+                    if (parsed.type == ParsedTransactionType.INCOME && parsed.bankName == "Boost Bank") {
+                        val hasMatchingTransfer = existing.any {
+                            it.transactionType == EntityTransactionType.TRANSFER && it.bankName != parsed.bankName
+                        }
+                        if (hasMatchingTransfer) {
+                            Log.d(TAG, "Boost Bank income reclassified as cross-bank TRANSFER")
+                            val corrected = parsed.copy(type = ParsedTransactionType.TRANSFER)
+                            val result = processor.saveParsedTransaction(corrected, body)
+                            if (notificationId != null) {
+                                notificationRepository.markProcessed(notificationId, result.transactionId)
+                            }
+                            return@launch
+                        }
                     }
                 }
 
