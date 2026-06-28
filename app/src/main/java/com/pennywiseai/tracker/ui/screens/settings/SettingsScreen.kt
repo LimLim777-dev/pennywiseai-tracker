@@ -170,9 +170,8 @@ fun SettingsScreen(
                 scrollBehaviorSmall = scrollBehaviorSmall,
                 scrollBehaviorLarge = scrollBehaviorLarge,
                 title = "Settings",
-                hasBackButton = true,
+                hasBackButton = false,
                 hasActionButton = true,
-                navigationContent = { SettingsNavigationContent(onNavigateBack) },
                 hazeState = hazeState
             )
         }

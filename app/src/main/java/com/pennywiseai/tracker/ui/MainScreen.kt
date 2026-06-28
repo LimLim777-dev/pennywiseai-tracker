@@ -566,7 +566,7 @@ fun MainScreen(
             }
 
             // Bottom navigation OVERLAID on content
-            if (baseRoute in listOf("home", "analytics", "chat")) {
+            if (baseRoute in listOf("home", "analytics", "settings")) {
                 PennyWiseBottomNavigation(
                     navController = navController,
                     currentDestination = navBackStackEntry?.destination,
