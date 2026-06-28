@@ -144,7 +144,8 @@ object BankParserFactory {
         PublicBankParser(),
         TNGEWalletParser(),
         RytBankParser(),
-        UOBCardParser()
+        UOBCardParser(),
+        ShopeepayParser()
         // Add more bank parsers here as we implement them
     )
 

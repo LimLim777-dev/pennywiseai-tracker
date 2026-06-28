@@ -16,7 +16,8 @@ object BankNotificationConfig {
         "my.com.gxbank.app" to "GXBank",
         "com.pbb.mypb" to "PublicBank",
         "my.com.tngdigital.ewallet" to "TNG",
-        "my.rytbank.app" to "RytBank"
+        "my.rytbank.app" to "RytBank",
+        "com.shopee.my" to "ShopeePay"
     )
 
     fun isAllowed(packageName: String): Boolean =
