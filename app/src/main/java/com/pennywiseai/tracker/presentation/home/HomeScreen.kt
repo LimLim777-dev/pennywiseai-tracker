@@ -790,33 +790,6 @@ fun HomeScreen(
                 }
             }
 
-            // 6. Heatmap Widget (300ms delay)
-            item {
-                val visible = remember { mutableStateOf(hasAnimated) }
-                LaunchedEffect(Unit) {
-                    if (!hasAnimated) { delay(300); visible.value = true }
-                }
-                AnimatedVisibility(
-                    visible = visible.value,
-                    enter = fadeIn(tween(300)) + slideInVertically(
-                        initialOffsetY = { slideOffsetPx },
-                        animationSpec = tween(300)
-                    )
-                ) {
-                    Column {
-                        SectionHeaderV2(
-                            title = "Activity",
-                            modifier = Modifier.padding(horizontal = Dimensions.Padding.content)
-                        )
-                        com.pennywiseai.tracker.ui.components.cards.HeatmapWidget(
-                            transactionHeatmap = uiState.transactionHeatmap,
-                            modifier = Modifier.padding(horizontal = Dimensions.Padding.content),
-                            blurEffects = blurEffects,
-                            hazeState = hazeStateBanner
-                        )
-                    }
-                }
-            }
         }
         
         // Scan FAB rotation animation
