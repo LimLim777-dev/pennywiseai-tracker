@@ -29,10 +29,20 @@ class UOBCardParser : BankParser() {
 
     override fun extractMerchant(message: String, sender: String): String? {
         MAIN_REGEX.find(message)?.let { match ->
-            val cleaned = cleanMerchantName(match.groupValues[2].trim())
+            val raw = match.groupValues[2].trim()
+            val normalized = normalizeMerchantName(raw)
+            val cleaned = cleanMerchantName(normalized)
             if (isValidMerchantName(cleaned)) return cleaned
         }
         return null
+    }
+
+    private fun normalizeMerchantName(raw: String): String {
+        // UOB SMS often encodes merchant as "ProcessorCode*ActualName" (e.g. "Ecs*setelventures").
+        // Strip the processor prefix and map known names to their proper display names.
+        val withoutPrefix = raw.replace(Regex("""^[A-Za-z0-9]+\*"""), "").trim()
+        val key = withoutPrefix.lowercase()
+        return MERCHANT_ALIASES[key] ?: withoutPrefix
     }
 
     override fun extractAccountLast4(message: String): String? {
@@ -45,6 +55,12 @@ class UOBCardParser : BankParser() {
         private val MAIN_REGEX = Regex(
             """ending\s+(\d{4})\s*@?\s*(.+?)\s+for\s+MYR\s*([0-9,]+\.\d{2})""",
             RegexOption.IGNORE_CASE
+        )
+        // Maps lowercase merchant name (after stripping processor prefix) to display name.
+        // Add more entries here whenever a new UOB merchant code is encountered.
+        private val MERCHANT_ALIASES = mapOf(
+            "setelventures" to "Setel",
+            "setel" to "Setel"
         )
     }
 }
