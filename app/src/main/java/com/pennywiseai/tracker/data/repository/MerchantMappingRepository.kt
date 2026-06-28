@@ -15,12 +15,18 @@ class MerchantMappingRepository @Inject constructor(
     suspend fun getCategoryForMerchant(merchantName: String): String? {
         return merchantMappingDao.getCategoryForMerchant(merchantName)
     }
-    
-    suspend fun setMapping(merchantName: String, category: String) {
+
+    suspend fun getDisplayNameForMerchant(merchantName: String): String? {
+        return merchantMappingDao.getDisplayNameForMerchant(merchantName)
+    }
+
+    suspend fun setMapping(merchantName: String, category: String, displayName: String? = null) {
+        val existing = merchantMappingDao.getDisplayNameForMerchant(merchantName)
         merchantMappingDao.insertOrUpdateMapping(
             MerchantMappingEntity(
                 merchantName = merchantName,
                 category = category,
+                displayName = displayName ?: existing,
                 updatedAt = LocalDateTime.now()
             )
         )

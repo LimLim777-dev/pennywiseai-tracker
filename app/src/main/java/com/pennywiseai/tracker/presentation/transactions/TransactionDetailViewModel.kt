@@ -78,6 +78,10 @@ class TransactionDetailViewModel @Inject constructor(
     
     private val _applyToAllFromMerchant = MutableStateFlow(false)
     val applyToAllFromMerchant: StateFlow<Boolean> = _applyToAllFromMerchant.asStateFlow()
+
+    // Tracks the merchant name as originally loaded (before user edits),
+    // so we can save a raw→display mapping when the user renames a merchant.
+    private var _originalMerchantName: String? = null
     
     private val _updateExistingTransactions = MutableStateFlow(false)
     val updateExistingTransactions: StateFlow<Boolean> = _updateExistingTransactions.asStateFlow()
@@ -238,6 +242,7 @@ class TransactionDetailViewModel @Inject constructor(
             val transaction = transactionRepository.getTransactionById(transactionId)
             _transaction.value = transaction
             transaction?.let {
+                if (_originalMerchantName == null) _originalMerchantName = it.merchantName
                 determinePrimaryCurrency(it)
                 calculateConvertedAmount(it)
                 loadSplits(transactionId)
@@ -722,10 +727,21 @@ class TransactionDetailViewModel @Inject constructor(
 
                 // Save merchant mapping if checkbox is checked
                 if (_applyToAllFromMerchant.value) {
-                    merchantMappingRepository.setMapping(
-                        normalizedTransaction.merchantName,
-                        normalizedTransaction.category
-                    )
+                    val orig = _originalMerchantName
+                    val edited = normalizedTransaction.merchantName
+                    // If the user renamed the merchant, save raw→display mapping under the original name
+                    if (orig != null && orig != edited) {
+                        merchantMappingRepository.setMapping(
+                            merchantName = orig,
+                            category = normalizedTransaction.category,
+                            displayName = edited
+                        )
+                    } else {
+                        merchantMappingRepository.setMapping(
+                            merchantName = edited,
+                            category = normalizedTransaction.category
+                        )
+                    }
                 }
 
                 // Update existing transactions if checkbox is checked

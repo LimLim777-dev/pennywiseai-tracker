@@ -13,10 +13,13 @@ data class MerchantMappingEntity(
     @PrimaryKey
     @ColumnInfo(name = "merchant_name")
     val merchantName: String,
-    
+
     @ColumnInfo(name = "category")
     val category: String,
-    
+
+    @ColumnInfo(name = "display_name")
+    val displayName: String? = null,
+
     @ColumnInfo(name = "created_at")
     @Contextual
     val createdAt: LocalDateTime = LocalDateTime.now(),

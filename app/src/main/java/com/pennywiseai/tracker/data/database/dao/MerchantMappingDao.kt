@@ -9,6 +9,9 @@ interface MerchantMappingDao {
     
     @Query("SELECT category FROM merchant_mappings WHERE merchant_name = :merchantName")
     suspend fun getCategoryForMerchant(merchantName: String): String?
+
+    @Query("SELECT display_name FROM merchant_mappings WHERE merchant_name = :merchantName")
+    suspend fun getDisplayNameForMerchant(merchantName: String): String?
     
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateMapping(mapping: MerchantMappingEntity)

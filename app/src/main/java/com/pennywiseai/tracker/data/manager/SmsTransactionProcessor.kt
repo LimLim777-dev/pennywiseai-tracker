@@ -120,13 +120,18 @@ class SmsTransactionProcessor @Inject constructor(
                 return ProcessingResult(false, reason = "Duplicate transaction")
             }
 
-            // Check for custom merchant mapping
+            // Apply custom merchant display name and category from user-defined mappings
+            val customDisplayName = merchantMappingRepository.getDisplayNameForMerchant(entity.merchantName)
             val customCategory = merchantMappingRepository.getCategoryForMerchant(entity.merchantName)
-            val entityWithMapping = if (customCategory != null) {
-                Log.d(TAG, "Found custom category mapping: ${entity.merchantName} -> $customCategory")
-                entity.copy(category = customCategory)
-            } else {
-                entity
+            val entityWithMapping = when {
+                customDisplayName != null || customCategory != null -> {
+                    Log.d(TAG, "Found merchant mapping: ${entity.merchantName} -> display=${customDisplayName}, category=${customCategory}")
+                    entity.copy(
+                        merchantName = customDisplayName ?: entity.merchantName,
+                        category = customCategory ?: entity.category
+                    )
+                }
+                else -> entity
             }
 
             // Apply rule engine to the transaction
