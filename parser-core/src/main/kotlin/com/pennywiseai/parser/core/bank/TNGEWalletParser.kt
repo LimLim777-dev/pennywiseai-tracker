@@ -55,8 +55,8 @@ class TNGEWalletParser : BankParser() {
                 return cleaned.takeIf { isValidMerchantName(it) }
             }
         }
-        // Cashback — no merchant (it's TNG rewarding the user)
-        if (lower.contains("cashback")) return null
+        // Cashback — TNG is the source
+        if (lower.contains("cashback")) return "TNG eWallet"
         val counterparty = extractCounterparty(message) ?: return null
         val cleaned = cleanMerchantName(counterparty.trim())
         return cleaned.takeIf { isValidMerchantName(it) }
