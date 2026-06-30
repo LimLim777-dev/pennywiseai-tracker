@@ -354,6 +354,7 @@ fun TransactionTabContent(
                             when (uiState.selectedAccount?.getAccountType()) {
                                 AccountType.CASH -> Icons.Default.Money
                                 AccountType.CREDIT -> Icons.Default.CreditCard
+                                AccountType.WALLET -> Icons.Default.Wallet
                                 AccountType.SAVINGS, AccountType.CURRENT -> Icons.Default.AccountBalance
                                 null -> Icons.Default.AccountBalance
                             },

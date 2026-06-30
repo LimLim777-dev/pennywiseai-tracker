@@ -2,11 +2,15 @@ package com.pennywiseai.tracker
 
 import android.app.Activity
 import android.app.Application
+import android.content.Context
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.pennywiseai.tracker.data.preferences.UserPreferencesRepository
 import com.pennywiseai.tracker.data.repository.AppLockRepository
+import com.pennywiseai.tracker.receiver.ScreenshotObserver
 import com.pennywiseai.tracker.utils.CurrencyFormatter
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -34,6 +38,7 @@ class PennyWiseApplication : Application(), Configuration.Provider {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var activityReferences = 0
     private var isInForeground = false
+    private var screenshotObserver: ScreenshotObserver? = null
 
     /**
      * Publicly accessible flag to check if the app is in the foreground.
@@ -73,6 +78,34 @@ class PennyWiseApplication : Application(), Configuration.Provider {
                 CurrencyFormatter.numberFormatStyle = style
             }
         }
+
+        // Start screenshot observer immediately if permission is already granted.
+        // Also called from Settings when the user grants permission for the first time.
+        startScreenshotObserver()
+    }
+
+    suspend fun processLatestScreenshot(): Boolean {
+        val observer = screenshotObserver ?: ScreenshotObserver(this, applicationScope).also {
+            if (!it.hasMediaPermission()) return false
+        }
+        return observer.processLatestManually()
+    }
+
+    suspend fun processScreenshotUri(context: Context, uri: Uri): Boolean {
+        val observer = screenshotObserver ?: ScreenshotObserver(this, applicationScope)
+        return observer.processUri(uri)
+    }
+
+    fun startScreenshotObserver() {
+        if (screenshotObserver != null) return // already running
+        val observer = ScreenshotObserver(this, applicationScope)
+        if (!observer.hasMediaPermission()) return
+        contentResolver.registerContentObserver(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            true,
+            observer
+        )
+        screenshotObserver = observer
     }
 
     /**
@@ -88,8 +121,9 @@ class PennyWiseApplication : Application(), Configuration.Provider {
                 // App came to foreground
                 isInForeground = true
                 isAppInForeground = true
-                // Check if app should be locked when returning from background
                 checkAndLockApp()
+                // Re-check in case permission was granted while app was backgrounded
+                startScreenshotObserver()
             }
         }
 

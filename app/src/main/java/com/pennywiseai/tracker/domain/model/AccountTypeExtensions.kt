@@ -16,6 +16,7 @@ fun String?.toAccountType(): AccountType = when (this?.uppercase()) {
     "CURRENT" -> AccountType.CURRENT
     "CREDIT" -> AccountType.CREDIT
     "CASH" -> AccountType.CASH
+    "WALLET" -> AccountType.WALLET
     else -> AccountType.SAVINGS  // Default fallback
 }
 
@@ -39,4 +40,5 @@ fun AccountType.displayName(): String = when (this) {
     AccountType.CURRENT -> "Current"
     AccountType.CREDIT -> "Credit Card"
     AccountType.CASH -> "Cash"
+    AccountType.WALLET -> "E-Wallet"
 }

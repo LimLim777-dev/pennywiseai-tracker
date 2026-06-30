@@ -154,8 +154,12 @@ fun AddAccountScreen(
                 onExpandedChange = { showTypeDropdown = it }
             ) {
                 TextField(
-                    value = formState.accountType.name.lowercase().let { s ->
-                        if (s.isEmpty()) s else s.substring(0, 1).uppercase() + s.substring(1)
+                    value = when (formState.accountType) {
+                        AccountType.SAVINGS -> "Savings"
+                        AccountType.CURRENT -> "Current"
+                        AccountType.CREDIT -> "Credit Card"
+                        AccountType.CASH -> "Cash"
+                        AccountType.WALLET -> "E-Wallet"
                     },
                     onValueChange = {},
                     readOnly = true,
@@ -170,6 +174,7 @@ fun AddAccountScreen(
                                 AccountType.SAVINGS, AccountType.CURRENT -> Icons.Default.AccountBalance
                                 AccountType.CREDIT -> Icons.Default.CreditCard
                                 AccountType.CASH -> Icons.Default.Money
+                                AccountType.WALLET -> Icons.Default.Wallet
                             },
                             contentDescription = null
                         )
@@ -185,8 +190,12 @@ fun AddAccountScreen(
                     AccountType.values().forEach { type ->
                         DropdownMenuItem(
                             text = {
-                                Text(type.name.lowercase().let { s ->
-                                    if (s.isEmpty()) s else s.substring(0, 1).uppercase() + s.substring(1)
+                                Text(when (type) {
+                                    AccountType.SAVINGS -> "Savings"
+                                    AccountType.CURRENT -> "Current"
+                                    AccountType.CREDIT -> "Credit Card"
+                                    AccountType.CASH -> "Cash"
+                                    AccountType.WALLET -> "E-Wallet"
                                 })
                             },
                             onClick = {
@@ -199,6 +208,7 @@ fun AddAccountScreen(
                                         AccountType.SAVINGS, AccountType.CURRENT -> Icons.Default.AccountBalance
                                         AccountType.CREDIT -> Icons.Default.CreditCard
                                         AccountType.CASH -> Icons.Default.Money
+                                        AccountType.WALLET -> Icons.Default.Wallet
                                     },
                                     contentDescription = null
                                 )
@@ -265,7 +275,8 @@ fun AddAccountScreen(
                     onValueChange = viewModel::updateAccountLast4,
                     label = {
                         Text(
-                            if (formState.accountType == AccountType.CASH) "Identifier (Optional)" else "Last 4 Digits *",
+                            if (formState.accountType == AccountType.CASH || formState.accountType == AccountType.WALLET)
+                                "Identifier (Optional)" else "Last 4 Digits *",
                             fontWeight = FontWeight.SemiBold
                         )
                     },
@@ -286,6 +297,9 @@ fun AddAccountScreen(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     shape = if (formState.accountType == AccountType.CREDIT) acctMiddleShape else acctFullShape,
+                    supportingText = if (formState.accountType == AccountType.WALLET) {
+                        { Text("Your ShopeePay wallet balance") }
+                    } else null,
                     colors = acctColors
                 )
 

@@ -307,6 +307,9 @@ dependencies {
     // PDFBox Android for PDF statement parsing
     implementation(libs.pdfbox.android)
 
+    // ML Kit text recognition for ShopeePay screenshot parsing
+    implementation(libs.mlkit.text.recognition)
+
     // Google Play Billing — STANDARD FLAVOR ONLY. F-Droid forbids the
     // proprietary library; its build keeps Pro features unlocked via the
     // FdroidBillingGateway stub and does not need the dep.

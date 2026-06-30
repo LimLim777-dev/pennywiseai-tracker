@@ -25,6 +25,11 @@
     <!-- Explicitly remove AD_ID permission to ensure privacy -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />
 
+    <!-- Read media images for ShopeePay screenshot detection (Android 13+) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Fallback for Android 12 and below -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+
     <application
         android:name=".PennyWiseApplication"
         android:allowBackup="false"
@@ -51,6 +56,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Translucent activity for confirming ShopeePay screenshot transactions. -->
+        <activity
+            android:name=".receiver.ShopeePayConfirmActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:theme="@style/Theme.PennyWise.Transparent" />
 
         <!-- Translucent picker launched from the "More categories…" txn-alert
              notification action (#303). singleTask + excludeFromRecents so a

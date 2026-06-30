@@ -82,7 +82,6 @@ fun TransactionItem(
 
     val subtitle = remember(transaction, dateTimeText, isEffectivelyBusiness) {
         buildList {
-            if (description != null) add(description)
             add(dateTimeText)
             if (transaction.category.isNotBlank() &&
                 !transaction.category.equals("Uncategorized", ignoreCase = true)
@@ -140,6 +139,7 @@ fun TransactionItem(
     ListItemCardV2(
         title = transferTitle ?: merchantDisplay(transaction.merchantName) ?: transaction.merchantName,
         subtitle = subtitle,
+        extraLine = description,
         amount = "$amountPrefix$formattedAmount",
         amountColor = amountColor,
         shape = listItemPosition.toShape(),

@@ -17,7 +17,9 @@ class TNGEWalletParser : BankParser() {
         return lower.contains("transferred to") ||
             lower.contains("received from") ||
             lower.contains("successfully transferred") ||
-            (lower.contains("has transferred") && lower.contains("to you"))
+            (lower.contains("has transferred") && lower.contains("to you")) ||
+            lower.contains("has been deducted from your tng ewallet") ||
+            (lower.contains("received") && lower.contains("cashback"))
     }
 
     override fun extractAmount(message: String): BigDecimal? {
@@ -29,6 +31,8 @@ class TNGEWalletParser : BankParser() {
 
     override fun extractTransactionType(message: String): TransactionType? {
         val lower = message.lowercase()
+        if (lower.contains("has been deducted from your tng ewallet")) return TransactionType.EXPENSE
+        if (lower.contains("received") && lower.contains("cashback")) return TransactionType.INCOME
         val counterparty = extractCounterparty(message)
         if (SelfTransferDetector.isOwnerName(counterparty)) return TransactionType.TRANSFER
         return when {
@@ -41,9 +45,26 @@ class TNGEWalletParser : BankParser() {
     }
 
     override fun extractMerchant(message: String, sender: String): String? {
+        val lower = message.lowercase()
+        // Merchant QR payment: "MERCHANT NAME: RM94.65 has been deducted from your TNG eWallet"
+        if (lower.contains("has been deducted from your tng ewallet")) {
+            val match = MERCHANT_DEDUCTED_REGEX.find(message)
+            if (match != null) {
+                val name = match.groupValues[1].trim()
+                val cleaned = cleanMerchantName(name)
+                return cleaned.takeIf { isValidMerchantName(it) }
+            }
+        }
+        // Cashback — no merchant (it's TNG rewarding the user)
+        if (lower.contains("cashback")) return null
         val counterparty = extractCounterparty(message) ?: return null
         val cleaned = cleanMerchantName(counterparty.trim())
         return cleaned.takeIf { isValidMerchantName(it) }
+    }
+
+    override fun extractReference(message: String): String? {
+        MERCHANT_REF_REGEX.find(message)?.let { return it.groupValues[1] }
+        return super.extractReference(message)
     }
 
     private fun extractCounterparty(message: String): String? {
@@ -73,6 +94,15 @@ class TNGEWalletParser : BankParser() {
         )
         private val HAS_TRANSFERRED_REGEX = Regex(
             """^(.+?)\s+has transferred\s+(?:RM|MYR)""", RegexOption.IGNORE_CASE
+        )
+        // "PAULINE'S KRYSTAL POIN: RM94.65 has been deducted from your TNG eWallet"
+        private val MERCHANT_DEDUCTED_REGEX = Regex(
+            """^(.+?):\s*(?:RM|MYR)\s*[0-9,]+\.\d{2}\s+has been deducted""",
+            RegexOption.IGNORE_CASE
+        )
+        // "Merchant Reference No. DM10P5L3Q2UNC"
+        private val MERCHANT_REF_REGEX = Regex(
+            """Merchant Reference No\.\s*(\S+)""", RegexOption.IGNORE_CASE
         )
     }
 }

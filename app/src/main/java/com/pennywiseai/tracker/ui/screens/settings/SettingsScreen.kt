@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import com.pennywiseai.tracker.core.Constants
 import com.pennywiseai.tracker.ui.components.CustomTitleTopAppBar
 import com.pennywiseai.tracker.ui.components.cards.SectionHeaderV2
@@ -111,8 +112,6 @@ fun SettingsScreen(
     val accounts by settingsViewModel.accounts.collectAsStateWithLifecycle()
     val mainAccountKey by settingsViewModel.mainAccountKey.collectAsStateWithLifecycle()
     val useContactsForVpa by settingsViewModel.useContactsForVpa.collectAsStateWithLifecycle(initialValue = false)
-    val isProEntitled by settingsViewModel.isProEntitled.collectAsStateWithLifecycle()
-    var showUpgradeSheet by remember { mutableStateOf(false) }
     // Launches the runtime permission request. If granted, we flip the
     // preference on; if denied, leave the switch off so the user can try
     // again without us silently turning the feature on later.
@@ -135,6 +134,39 @@ fun SettingsScreen(
         contract = ActivityResultContracts.StartActivityForResult()
     ) {
         permissionViewModel.refreshNotificationAccess()
+    }
+    val mediaImagesPermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        android.Manifest.permission.READ_MEDIA_IMAGES
+    } else {
+        android.Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+    val hasMediaPermission = remember {
+        mutableStateOf(
+            androidx.core.content.ContextCompat.checkSelfPermission(context, mediaImagesPermission) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val mediaPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasMediaPermission.value = granted
+        if (granted) {
+            (context.applicationContext as? com.pennywiseai.tracker.PennyWiseApplication)
+                ?.startScreenshotObserver()
+        }
+    }
+    var shopeeTestMessage by remember { mutableStateOf<String?>(null) }
+    val shopeeTestScope = androidx.compose.runtime.rememberCoroutineScope()
+    val shopeeImagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        shopeeTestScope.launch {
+            shopeeTestMessage = "Processing…"
+            val app = context.applicationContext as? com.pennywiseai.tracker.PennyWiseApplication
+            val found = app?.processScreenshotUri(context, uri) ?: false
+            shopeeTestMessage = if (found) "ShopeePay detected! Check for notification." else "Not a ShopeePay screenshot."
+        }
     }
 
     // File picker for import
@@ -187,28 +219,6 @@ fun SettingsScreen(
                 .padding(Dimensions.Padding.content),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
-            // ── PennyWise Pro ──
-            // Top of Settings on purpose: highest-discoverability slot for
-            // the upgrade entry. Row content adapts to entitlement state —
-            // paid users see "Active" so the row reads as status, free
-            // users see "Upgrade" so it reads as a call-to-action.
-            SectionHeaderV2(title = "PennyWise Pro")
-            SettingsGroup {
-                SettingsNavItem(
-                    icon = Icons.Default.AutoAwesome,
-                    iconBgColor = yellow_light,
-                    iconTint = yellow_dark,
-                    title = if (isProEntitled) "PennyWise Pro" else "Upgrade to PennyWise Pro",
-                    subtitle = if (isProEntitled) {
-                        "Active · all power features unlocked"
-                    } else {
-                        "Unlimited rules, statements, exports, and more"
-                    },
-                    onClick = { showUpgradeSheet = true },
-                    position = ItemPosition.SINGLE,
-                )
-            }
-
             // ── Personalization ──
             SectionHeaderV2(title = "Personalization")
             SettingsGroup {
@@ -530,9 +540,34 @@ fun SettingsScreen(
                         val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                         notificationAccessLauncher.launch(intent)
                     },
-                    position = ItemPosition.SINGLE,
+                    position = ItemPosition.TOP,
                     trailingText = if (hasNotificationAccess) "On" else "Off"
                 )
+                SettingsSwitchRow(
+                    icon = Icons.Default.Screenshot,
+                    iconBgColor = orange_light,
+                    iconTint = orange_dark,
+                    title = "ShopeePay Screenshot Detection",
+                    subtitle = if (hasMediaPermission.value) "Auto-detect ShopeePay QR payments from screenshots" else "Tap to grant photo access",
+                    checked = hasMediaPermission.value,
+                    onCheckedChange = { wantsOn ->
+                        if (wantsOn && !hasMediaPermission.value) {
+                            mediaPermissionLauncher.launch(mediaImagesPermission)
+                        }
+                    },
+                    position = if (hasMediaPermission.value) ItemPosition.MIDDLE else ItemPosition.BOTTOM
+                )
+                if (hasMediaPermission.value) {
+                    SettingsNavItem(
+                        icon = Icons.Default.ImageSearch,
+                        iconBgColor = orange_light,
+                        iconTint = orange_dark,
+                        title = "Import ShopeePay Screenshot",
+                        subtitle = shopeeTestMessage ?: "Select a ShopeePay payment screenshot",
+                        onClick = { shopeeImagePicker.launch("image/*") },
+                        position = ItemPosition.BOTTOM
+                    )
+                }
             }
 
             // ── AI Features ──
@@ -910,11 +945,6 @@ fun SettingsScreen(
         )
     }
 
-    if (showUpgradeSheet) {
-        com.pennywiseai.tracker.presentation.paywall.UpgradeSheet(
-            onDismiss = { showUpgradeSheet = false },
-        )
-    }
 }
 
 // ── Reusable Settings Components ──

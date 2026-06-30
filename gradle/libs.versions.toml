@@ -35,6 +35,7 @@ reviewKtx = "2.0.2"
 roomVersion = "2.8.4"
 litertlm = "0.+"
 visionInternalVkp = "18.2.3"
+mlkitTextRecognition = "16.0.1"
 workVersion = "2.11.2"
 coil = "2.7.0"
 material3 = "1.5.0-alpha12"
@@ -96,6 +97,7 @@ review = { module = "com.google.android.play:review", version.ref = "review" }
 review-ktx = { module = "com.google.android.play:review-ktx", version.ref = "reviewKtx" }
 litertlm-android = { module = "com.google.ai.edge.litertlm:litertlm-android", version.ref = "litertlm" }
 vision-internal-vkp = { group = "com.google.mlkit", name = "vision-internal-vkp", version.ref = "visionInternalVkp" }
+mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
 
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
 compose-charts = { module = "io.github.ehsannarmani:compose-charts", version.ref = "composeCharts" }

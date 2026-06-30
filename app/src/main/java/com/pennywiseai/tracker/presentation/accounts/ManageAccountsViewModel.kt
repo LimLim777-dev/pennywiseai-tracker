@@ -47,7 +47,8 @@ enum class AccountType {
     SAVINGS,
     CURRENT,
     CREDIT,
-    CASH
+    CASH,
+    WALLET
 }
 
 data class PendingProfileReassign(
@@ -157,13 +158,17 @@ class ManageAccountsViewModel @Inject constructor(
     }
     
     fun updateAccountLast4(last4: String) {
-        val isCash = _formState.value.accountType == AccountType.CASH
-        // Allow empty for CASH, or up to 4 chars for others
-        if (isCash || last4.length <= 4) {
+        val isNoDigits = _formState.value.accountType == AccountType.CASH || _formState.value.accountType == AccountType.WALLET
+        // Allow empty for CASH/WALLET, or up to 4 chars for others
+        if (isNoDigits || last4.length <= 4) {
+            val resolved = when {
+                isNoDigits && last4.isEmpty() -> _formState.value.accountType.name
+                else -> last4
+            }
             _formState.update {
                 it.copy(
-                    accountLast4 = if (isCash && last4.isEmpty()) "CASH" else last4,
-                    isValid = validateForm(it.bankName, if (isCash && last4.isEmpty()) "CASH" else last4, it.balance, it.accountType)
+                    accountLast4 = resolved,
+                    isValid = validateForm(it.bankName, resolved, it.balance, it.accountType)
                 )
             }
         }
@@ -193,9 +198,9 @@ class ManageAccountsViewModel @Inject constructor(
     }
     
     private fun validateForm(bankName: String, last4: String, balance: String, accountType: AccountType = AccountType.SAVINGS): Boolean {
-        val isCash = accountType == AccountType.CASH
+        val isNoDigits = accountType == AccountType.CASH || accountType == AccountType.WALLET
         return bankName.isNotBlank() &&
-               (isCash || last4.length == 4) &&  // CASH accounts: last4 can be "CASH" default
+               (isNoDigits || last4.length == 4) &&
                balance.isNotBlank() &&
                balance.toDoubleOrNull() != null
     }
