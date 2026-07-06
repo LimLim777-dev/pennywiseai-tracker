@@ -36,12 +36,12 @@ building new pipeline-dependent features.
 
 ## Open items (unblocked)
 
-- **T0.1 commit discipline**: working tree has ~33 pre-existing modified
-  files (before 2026-07-03) + the 2026-07-04..06 session work (TNG screenshot
-  parser + ConfirmActivity + rules fixes + OCR debug UI + T0.2 fixes + docs).
-  `main` is ahead of origin, unpushed. Ask user which pre-existing files to
-  commit/park; commit new work in logical commits and push (sole delivery
-  pipeline = Actions build; unpushed work has zero backup).
+- ~~T0.1 commit discipline~~ **DONE 2026-07-07** (user-authorized "你处理吧"):
+  entire tree committed in 6 logical commits (harness+docs / TNG channel /
+  MAE daily-income / pipeline fixes+v56 / UOB engine / pre-harness WIP
+  aggregate) and pushed — `main` now in sync with origin at `a023ac4a`.
+  Actions `build-my-apk.yml` triggered by the push; user installs the
+  **arm64-v8a** APK from that run's artifacts (carries all 15 fixes).
 - ~~T0.2 review quick fixes~~ **DONE 2026-07-06** (Fable 5): all six landed
   + RuleEngineTest green + APK builds. (1) RuleEngine malformed-regex
   runCatching + 4 new tests incl. EXCLUDE_FROM_ANALYTICS regression;
