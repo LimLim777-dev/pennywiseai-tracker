@@ -67,6 +67,8 @@ import com.pennywiseai.tracker.ui.LocalNavAnimatedVisibilityScope
 import com.pennywiseai.tracker.ui.LocalSharedTransitionScope
 import com.pennywiseai.tracker.ui.sharedElementIcon
 import com.pennywiseai.tracker.ui.components.BrandIcon
+import com.pennywiseai.tracker.ui.components.BankAccountIcon
+import com.pennywiseai.tracker.ui.icons.BrandIcons
 import com.pennywiseai.tracker.ui.components.CategoryChip
 import com.pennywiseai.tracker.ui.components.CustomTitleTopAppBar
 import com.pennywiseai.tracker.ui.components.PennyWiseCard
@@ -595,13 +597,22 @@ private fun TransactionReceipt(
                 } else {
                     Modifier
                 }
-                BrandIcon(
-                    merchantName = transaction.merchantName,
-                    category = transaction.category,
-                    modifier = heroIconModifier,
-                    size = 56.dp,
-                    showBackground = true
-                )
+                val detailBankName = transaction.bankName
+                if (detailBankName != null && BrandIcons.getMalaysianBankAvatar(detailBankName) != null) {
+                    BankAccountIcon(
+                        bankName = detailBankName,
+                        modifier = heroIconModifier,
+                        size = 56.dp
+                    )
+                } else {
+                    BrandIcon(
+                        merchantName = transaction.merchantName,
+                        category = transaction.category,
+                        modifier = heroIconModifier,
+                        size = 56.dp,
+                        showBackground = true
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(Spacing.sm))
 
@@ -734,16 +745,6 @@ private fun TransactionReceipt(
                     textAlign = TextAlign.Center
                 )
 
-                if (transaction.currency.isNotEmpty() &&
-                    !transaction.currency.equals(primaryCurrency, ignoreCase = true) &&
-                    convertedAmount != null
-                ) {
-                    Text(
-                        text = "\u2248 ${CurrencyFormatter.formatCurrency(convertedAmount, primaryCurrency)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
         }
 
@@ -1304,6 +1305,7 @@ private fun EditableExtractedInfoCard(
                 AccountNumberField(
                     accountNumber = transaction.accountNumber,
                     onAccountNumberChange = { viewModel.updateAccountNumber(it) },
+                    onAccountWithBankChange = { last4, bank -> viewModel.updateAccountAndBank(last4, bank) },
                     viewModel = viewModel
                 )
             }
@@ -1315,6 +1317,30 @@ private fun EditableExtractedInfoCard(
                     viewModel = viewModel
                 )
             }
+        }
+
+        // Personal share field — EXPENSE only
+        if (!showSplitEditor && transaction.transactionType == TransactionType.EXPENSE) {
+            // Local string state so trailing decimals (e.g. "16.") aren't swallowed
+            // when toBigDecimalOrNull() returns null mid-typing.
+            var personalAmountText by remember(transaction.id) {
+                mutableStateOf(
+                    transaction.personalAmount?.stripTrailingZeros()?.toPlainString() ?: ""
+                )
+            }
+            OutlinedTextField(
+                value = personalAmountText,
+                onValueChange = { raw ->
+                    personalAmountText = raw
+                    viewModel.updatePersonalAmount(raw)
+                },
+                label = { Text("My share (optional)") },
+                placeholder = { Text(transaction.amount.stripTrailingZeros().toPlainString()) },
+                supportingText = { Text("Leave blank if this expense is fully yours") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
 
         // Split button
@@ -1878,6 +1904,7 @@ private fun CurrencyDropdown(
 private fun AccountNumberField(
     accountNumber: String?,
     onAccountNumberChange: (String?) -> Unit,
+    onAccountWithBankChange: ((String?, String?) -> Unit)? = null,
     viewModel: TransactionDetailViewModel,
     label: String = "Account (Optional)",
     placeholder: String = "Select or enter account number",
@@ -1972,7 +1999,11 @@ private fun AccountNumberField(
                         },
                         onClick = {
                             selectedAccount = account.displayName
-                            onAccountNumberChange(account.accountLast4)
+                            if (onAccountWithBankChange != null) {
+                                onAccountWithBankChange(account.accountLast4, account.bankName)
+                            } else {
+                                onAccountNumberChange(account.accountLast4)
+                            }
                             expanded = false
                         },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding

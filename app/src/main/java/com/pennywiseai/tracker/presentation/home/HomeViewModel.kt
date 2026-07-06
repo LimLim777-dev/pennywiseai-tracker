@@ -243,14 +243,15 @@ class HomeViewModel @Inject constructor(
                         it.budgetImpactType != BudgetImpactType.DEDUCT_SPENT
                 }
                 .fold(BigDecimal.ZERO) { acc, tx -> acc + tx.amount }
-            val rawExpenses = txs
-                .filter { it.transactionType == TransactionType.EXPENSE }
-                .fold(BigDecimal.ZERO) { acc, tx -> acc + tx.amount }
+            val expenseTxs = txs.filter { it.transactionType == TransactionType.EXPENSE }
+            val rawExpenses = expenseTxs
+                .fold(BigDecimal.ZERO) { acc, tx -> acc + (tx.personalAmount ?: tx.amount) }
             val expenses = (rawExpenses - refundTotal).coerceAtLeast(BigDecimal.ZERO)
             TransactionRepository.MonthlyBreakdown(
                 total = income - expenses,
                 income = income,
-                expenses = expenses
+                expenses = expenses,
+                personalExpenses = expenses
             )
         }
     }
@@ -1173,6 +1174,7 @@ class HomeViewModel @Inject constructor(
                     currentMonthTotal = currentBreakdown.total - loanLoss,
                     currentMonthIncome = currentBreakdown.income,
                     currentMonthExpenses = currentBreakdown.expenses + loanLoss,
+                    currentMonthPersonalExpenses = currentBreakdown.personalExpenses + loanLoss,
                     currentMonthLent = lent,
                     lastMonthTotal = lastBreakdown.total,
                     lastMonthIncome = lastBreakdown.income,
@@ -1203,6 +1205,7 @@ class HomeViewModel @Inject constructor(
                 currentMonthTotal = currentBreakdown.total - loanLoss,
                 currentMonthIncome = currentBreakdown.income,
                 currentMonthExpenses = currentBreakdown.expenses + loanLoss,
+                currentMonthPersonalExpenses = currentBreakdown.personalExpenses + loanLoss,
                 currentMonthLent = lent,
                 lastMonthTotal = lastBreakdown.total,
                 lastMonthIncome = lastBreakdown.income,
@@ -1236,23 +1239,27 @@ class HomeViewModel @Inject constructor(
         var totalTotal = BigDecimal.ZERO
         var totalIncome = BigDecimal.ZERO
         var totalExpenses = BigDecimal.ZERO
+        var totalPersonalExpenses = BigDecimal.ZERO
 
         for ((currency, breakdown) in breakdownMap) {
             if (currency == targetCurrency) {
                 totalTotal += breakdown.total
                 totalIncome += breakdown.income
                 totalExpenses += breakdown.expenses
+                totalPersonalExpenses += breakdown.personalExpenses
             } else {
                 totalTotal += currencyConversionService.convertAmount(breakdown.total, currency, targetCurrency)
                 totalIncome += currencyConversionService.convertAmount(breakdown.income, currency, targetCurrency)
                 totalExpenses += currencyConversionService.convertAmount(breakdown.expenses, currency, targetCurrency)
+                totalPersonalExpenses += currencyConversionService.convertAmount(breakdown.personalExpenses, currency, targetCurrency)
             }
         }
 
         return TransactionRepository.MonthlyBreakdown(
             total = totalTotal,
             income = totalIncome,
-            expenses = totalExpenses
+            expenses = totalExpenses,
+            personalExpenses = totalPersonalExpenses
         )
     }
 
@@ -1427,6 +1434,7 @@ data class HomeUiState(
     val currentMonthTotal: BigDecimal = BigDecimal.ZERO,
     val currentMonthIncome: BigDecimal = BigDecimal.ZERO,
     val currentMonthExpenses: BigDecimal = BigDecimal.ZERO,
+    val currentMonthPersonalExpenses: BigDecimal = BigDecimal.ZERO,
     val currentMonthLent: BigDecimal = BigDecimal.ZERO,
     val currentMonthCreditCard: BigDecimal = BigDecimal.ZERO,
     val currentMonthTransfer: BigDecimal = BigDecimal.ZERO,

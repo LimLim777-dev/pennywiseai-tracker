@@ -172,6 +172,18 @@ class AccountBalanceRepository @Inject constructor(
         return accountBalanceDao.updateAccountBankName(oldBankName, accountLast4, newBankName)
     }
 
+    suspend fun updateAccountLast4(bankName: String, oldLast4: String, newLast4: String): Int {
+        return accountBalanceDao.updateAccountLast4(bankName, oldLast4, newLast4)
+    }
+
+    suspend fun updateAccountCurrency(bankName: String, accountLast4: String, currency: String): Int {
+        return accountBalanceDao.updateAccountCurrency(bankName, accountLast4, currency)
+    }
+
+    suspend fun updateAccountCreditCardType(bankName: String, accountLast4: String, isCreditCard: Boolean, creditLimit: java.math.BigDecimal?): Int {
+        return accountBalanceDao.updateAccountCreditCardType(bankName, accountLast4, isCreditCard, creditLimit)
+    }
+
     suspend fun updateStatementDay(bankName: String, accountLast4: String, statementDay: Int?): Int {
         return accountBalanceDao.updateStatementDay(bankName, accountLast4, statementDay)
     }
@@ -199,10 +211,6 @@ class AccountBalanceRepository @Inject constructor(
      */
     suspend fun setLowBalanceThreshold(bankName: String, accountLast4: String, threshold: BigDecimal?): Int {
         return accountBalanceDao.setLowBalanceThreshold(bankName, accountLast4, threshold)
-    }
-
-    suspend fun updateAccountCurrency(bankName: String, accountLast4: String, currency: String): Int {
-        return accountBalanceDao.updateAccountCurrency(bankName, accountLast4, currency)
     }
 
     /**

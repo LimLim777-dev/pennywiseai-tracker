@@ -75,6 +75,7 @@ fun BalanceCard(
     currency: String,
     currentMonthIncome: BigDecimal,
     currentMonthExpenses: BigDecimal,
+    currentMonthPersonalExpenses: BigDecimal = currentMonthExpenses,
     currentMonthLent: BigDecimal = BigDecimal.ZERO,
     currentMonthTotal: BigDecimal,
     balanceHistory: List<BigDecimal>,

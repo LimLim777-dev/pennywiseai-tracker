@@ -205,6 +205,24 @@ class AccountDetailViewModel @Inject constructor(
     fun selectDateRange(dateRange: DateRange) {
         _selectedDateRange.value = dateRange
     }
+
+    fun updateAccountLast4(newLast4: String) {
+        viewModelScope.launch {
+            accountBalanceRepository.updateAccountLast4(bankName, accountLast4, newLast4.trim())
+        }
+    }
+
+    fun updateAccountCurrency(currency: String) {
+        viewModelScope.launch {
+            accountBalanceRepository.updateAccountCurrency(bankName, accountLast4, currency)
+        }
+    }
+
+    fun updateAccountCreditCardType(isCreditCard: Boolean, creditLimit: BigDecimal?) {
+        viewModelScope.launch {
+            accountBalanceRepository.updateAccountCreditCardType(bankName, accountLast4, isCreditCard, creditLimit)
+        }
+    }
     
     private fun getDateRangeValues(dateRange: DateRange): Pair<LocalDateTime, LocalDateTime> {
         val endDate = LocalDateTime.now()

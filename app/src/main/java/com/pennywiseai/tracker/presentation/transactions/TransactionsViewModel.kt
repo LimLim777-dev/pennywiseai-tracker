@@ -1245,14 +1245,15 @@ class TransactionsViewModel @Inject constructor(
             val income = currencyTransactions
                 .filter {
                     it.transactionType == TransactionType.INCOME &&
-                        it.budgetImpactType != BudgetImpactType.DEDUCT_SPENT
+                        it.budgetImpactType != BudgetImpactType.DEDUCT_SPENT &&
+                        !it.excludedFromAnalytics
                 }
                 .map { it.amount.toDouble() }.sum()
                 .toBigDecimal()
 
             val rawExpenses = currencyTransactions
-                .filter { it.transactionType == TransactionType.EXPENSE }
-                .map { it.amount.toDouble() }.sum()
+                .filter { it.transactionType == TransactionType.EXPENSE && !it.excludedFromAnalytics }
+                .map { (it.personalAmount ?: it.amount).toDouble() }.sum()
                 .toBigDecimal()
             val expenses = (rawExpenses - refundTotal).coerceAtLeast(BigDecimal.ZERO)
 

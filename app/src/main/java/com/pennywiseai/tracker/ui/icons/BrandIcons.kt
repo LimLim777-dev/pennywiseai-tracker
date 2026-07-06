@@ -376,4 +376,23 @@ object BrandIcons {
 
         else -> null
     }
+
+    /**
+     * Returns (abbreviation, brandColorHex) for known Malaysian banks so the UI
+     * can render a colored avatar instead of the generic bank icon.
+     */
+    fun getMalaysianBankAvatar(bankName: String): Pair<String, String>? {
+        val n = bankName.lowercase()
+        return when {
+            n.contains("boost") -> "Boost" to "#F05A28"
+            n.contains("gxbank") || n.contains("gx bank") -> "GX" to "#6B3FA0"
+            n.contains("maybank") || n.contains("mae") -> "MB" to "#FBBC05"
+            n.contains("public bank") || n.contains("mypb") || n.contains("pbbank") -> "PB" to "#003087"
+            n.contains("ryt") -> "RYT" to "#0071CE"
+            n.contains("shopee") -> "SP" to "#EE4D2D"
+            n.contains("tng") || (n.contains("touch") && n.contains("go")) -> "TNG" to "#1F62A5"
+            n.contains("uob") -> "UOB" to "#CC0000"
+            else -> null
+        }
+    }
 }

@@ -54,6 +54,8 @@ fun AccountDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val selectedDateRange by viewModel.selectedDateRange.collectAsState()
 
+    var showEditDialog by remember { mutableStateOf(false) }
+
     val scrollBehaviorSmall = TopAppBarDefaults.pinnedScrollBehavior()
     val scrollBehaviorLarge = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val hazeState = remember { HazeState() }
@@ -71,6 +73,11 @@ fun AccountDetailScreen(
                 navigationContent = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actionContent = {
+                    IconButton(onClick = { showEditDialog = true }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit account")
                     }
                 },
                 hazeState = hazeState
@@ -181,6 +188,106 @@ fun AccountDetailScreen(
             }
         }
     }
+
+    if (showEditDialog) {
+        EditAccountDialog(
+            currentLast4 = uiState.accountLast4,
+            currentCurrency = uiState.primaryCurrency,
+            currentIsCreditCard = uiState.currentBalance?.isCreditCard ?: false,
+            currentCreditLimit = uiState.currentBalance?.creditLimit,
+            onDismiss = { showEditDialog = false },
+            onConfirm = { newLast4, newCurrency, isCreditCard, creditLimit ->
+                if (newLast4 != uiState.accountLast4) viewModel.updateAccountLast4(newLast4)
+                if (newCurrency != uiState.primaryCurrency) viewModel.updateAccountCurrency(newCurrency)
+                viewModel.updateAccountCreditCardType(isCreditCard, creditLimit)
+                showEditDialog = false
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditAccountDialog(
+    currentLast4: String,
+    currentCurrency: String,
+    currentIsCreditCard: Boolean,
+    currentCreditLimit: java.math.BigDecimal?,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String, Boolean, java.math.BigDecimal?) -> Unit
+) {
+    var last4 by remember { mutableStateOf(currentLast4) }
+    var currency by remember { mutableStateOf(currentCurrency) }
+    var isCreditCard by remember { mutableStateOf(currentIsCreditCard) }
+    var creditLimitStr by remember { mutableStateOf(currentCreditLimit?.stripTrailingZeros()?.toPlainString() ?: "") }
+    var showCurrencyDropdown by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Account") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                OutlinedTextField(
+                    value = last4,
+                    onValueChange = { last4 = it },
+                    label = { Text("Account Identifier") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                ExposedDropdownMenuBox(
+                    expanded = showCurrencyDropdown,
+                    onExpandedChange = { showCurrencyDropdown = it }
+                ) {
+                    OutlinedTextField(
+                        value = currency,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Currency") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCurrencyDropdown) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = showCurrencyDropdown,
+                        onDismissRequest = { showCurrencyDropdown = false }
+                    ) {
+                        CurrencyFormatter.getSupportedCurrencies().sorted().forEach { code ->
+                            DropdownMenuItem(
+                                text = { Text("$code  ${CurrencyFormatter.getCurrencySymbol(code)}") },
+                                onClick = { currency = code; showCurrencyDropdown = false }
+                            )
+                        }
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Credit Card", style = MaterialTheme.typography.bodyMedium)
+                    Switch(checked = isCreditCard, onCheckedChange = { isCreditCard = it })
+                }
+                if (isCreditCard) {
+                    OutlinedTextField(
+                        value = creditLimitStr,
+                        onValueChange = { creditLimitStr = it },
+                        label = { Text("Credit Limit (optional)") },
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val creditLimit = if (isCreditCard) creditLimitStr.toBigDecimalOrNull() else null
+                onConfirm(last4, currency, isCreditCard, creditLimit)
+            }) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
@@ -359,11 +466,10 @@ private fun CurrentBalanceCard(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = if (isCreditCard) Icons.Default.CreditCard else Icons.Default.AccountBalance,
-                    contentDescription = null,
-                    modifier = Modifier.size(Dimensions.Icon.small),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                BankAccountIcon(
+                    bankName = bankName,
+                    isCreditCard = isCreditCard,
+                    size = 24.dp
                 )
                 Text(
                     text = "$bankName ••$accountLast4",

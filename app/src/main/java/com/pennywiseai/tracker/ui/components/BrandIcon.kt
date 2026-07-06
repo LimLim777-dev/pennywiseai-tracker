@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -17,8 +20,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.pennywiseai.tracker.ui.icons.BrandIcons
 import com.pennywiseai.tracker.ui.icons.CategoryMapping
 import com.pennywiseai.tracker.ui.icons.IconProvider
@@ -164,4 +169,59 @@ private fun String.toColorInt(): Int {
     // Remove # if present and parse hex
     val hex = this.removePrefix("#")
     return android.graphics.Color.parseColor("#$hex")
+}
+
+/**
+ * Bank account icon: shows a brand-colored avatar with abbreviation for known
+ * Malaysian banks, falls back to a generic AccountBalance / CreditCard vector icon
+ * for all other banks.
+ */
+@Composable
+fun BankAccountIcon(
+    bankName: String,
+    isCreditCard: Boolean = false,
+    modifier: Modifier = Modifier,
+    size: Dp = 40.dp
+) {
+    val avatar = BrandIcons.getMalaysianBankAvatar(bankName)
+
+    if (avatar != null) {
+        val (abbr, colorHex) = avatar
+        val bgColor = try { Color(android.graphics.Color.parseColor(colorHex)) }
+                      catch (_: Exception) { MaterialTheme.colorScheme.primary }
+        val textSize = (size.value * 0.30f).sp
+
+        Box(
+            modifier = modifier
+                .size(size)
+                .clip(CircleShape)
+                .background(bgColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = abbr,
+                color = Color.White,
+                fontSize = textSize,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+        }
+    } else {
+        val fallbackIcon = if (isCreditCard) Icons.Default.CreditCard else Icons.Default.AccountBalance
+        Box(
+            modifier = modifier
+                .size(size)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = fallbackIcon,
+                contentDescription = bankName,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(size * 0.55f)
+            )
+        }
+    }
 }

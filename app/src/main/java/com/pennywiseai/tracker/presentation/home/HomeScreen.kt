@@ -412,6 +412,7 @@ fun HomeScreen(
                             currency = uiState.selectedCurrency,
                             currentMonthIncome = uiState.currentMonthIncome,
                             currentMonthExpenses = uiState.currentMonthExpenses,
+                            currentMonthPersonalExpenses = uiState.currentMonthPersonalExpenses,
                             currentMonthLent = uiState.currentMonthLent,
                             currentMonthTotal = uiState.currentMonthTotal,
                             balanceHistory = uiState.balanceHistory,
@@ -970,18 +971,7 @@ fun HomeScreen(
                         .fillMaxWidth()
                 )
 
-                // Settings (Top)
-                MenuListItem(
-                    headline = "Settings",
-                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                    position = ListItemPosition.Top,
-                    onClick = {
-                        showMenuSheet = false
-                        onNavigateToSettings()
-                    }
-                )
-
-                // Join Discord (Middle)
+                // Join Discord (Top)
                 MenuListItem(
                     headline = "Join Discord for feedback",
                     icon = {
@@ -991,7 +981,7 @@ fun HomeScreen(
                             modifier = Modifier.size(Dimensions.Icon.medium)
                         )
                     },
-                    position = ListItemPosition.Middle,
+                    position = ListItemPosition.Top,
                     onClick = {
                         showMenuSheet = false
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(Constants.Links.DISCORD_URL))

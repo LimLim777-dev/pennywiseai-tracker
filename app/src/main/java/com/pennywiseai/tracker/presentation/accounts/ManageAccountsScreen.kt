@@ -37,6 +37,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import java.math.BigDecimal
 import com.pennywiseai.tracker.data.database.entity.ProfileEntity
+import com.pennywiseai.tracker.ui.components.BankAccountIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -515,11 +516,12 @@ fun ManageAccountsScreen(
                 showEditDialog = false
                 accountToEdit = null
             },
-            onConfirm = { newBankName, newBalance, newCreditLimit, newCurrency ->
+            onConfirm = { newBankName, newAccountLast4, newBalance, newCreditLimit, newCurrency ->
                 viewModel.editAccount(
                     oldBankName = accountToEdit!!.bankName,
                     accountLast4 = accountToEdit!!.accountLast4,
                     newBankName = newBankName,
+                    newAccountLast4 = newAccountLast4,
                     newBalance = newBalance,
                     newCreditLimit = newCreditLimit,
                     isCreditCard = accountToEdit!!.isCreditCard,
@@ -632,10 +634,10 @@ private fun CreditCardItem(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.CreditCard,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                    BankAccountIcon(
+                        bankName = card.bankName,
+                        isCreditCard = true,
+                        size = Dimensions.Icon.list
                     )
                     Column {
                         Row(
@@ -972,10 +974,10 @@ private fun AccountItem(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.AccountBalance,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                    BankAccountIcon(
+                        bankName = account.bankName,
+                        isCreditCard = false,
+                        size = Dimensions.Icon.list
                     )
                     val alias = account.alias?.takeIf { it.isNotBlank() }
                     Column {
@@ -2058,15 +2060,13 @@ private fun DeleteAccountConfirmDialog(
 private fun EditAccountDialog(
     account: com.pennywiseai.tracker.data.database.entity.AccountBalanceEntity,
     onDismiss: () -> Unit,
-    onConfirm: (bankName: String, balance: BigDecimal, creditLimit: BigDecimal?, currency: String) -> Unit
+    onConfirm: (bankName: String, accountLast4: String, balance: BigDecimal, creditLimit: BigDecimal?, currency: String) -> Unit
 ) {
+    val isManual = account.sourceType == "MANUAL"
     var bankNameText by remember { mutableStateOf(account.bankName) }
+    var accountNumberText by remember { mutableStateOf(account.accountLast4) }
     var balanceText by remember { mutableStateOf(account.balance.toString()) }
     var creditLimitText by remember { mutableStateOf(account.creditLimit?.toString() ?: "") }
-    // Pre-fill with the *resolved* currency (what the account actually displays), not
-    // the raw stored value — an SMS-tracked non-INR account stores the INR default but
-    // shows the parser currency. Seeding from the raw value would let an unrelated edit
-    // silently lock the account to INR.
     var currencyText by remember {
         mutableStateOf(
             CurrencyFormatter.resolveAccountCurrency(
@@ -2079,8 +2079,9 @@ private fun EditAccountDialog(
     var showCurrencyMenu by remember { mutableStateOf(false) }
     var isValid by remember { mutableStateOf(false) }
 
-    LaunchedEffect(bankNameText, balanceText, creditLimitText) {
+    LaunchedEffect(bankNameText, accountNumberText, balanceText, creditLimitText) {
         isValid = bankNameText.isNotBlank() &&
+                  accountNumberText.isNotBlank() &&
                   balanceText.isNotBlank() &&
                   balanceText.toDoubleOrNull() != null &&
                   (if (account.isCreditCard) creditLimitText.isNotBlank() && creditLimitText.toDoubleOrNull() != null else true)
@@ -2117,58 +2118,75 @@ private fun EditAccountDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Account Number (Read-only)
-                TextField(
-                    value = "••${account.accountLast4}",
-                    onValueChange = {},
-                    label = { Text("Account Number") },
-                    enabled = false,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        disabledIndicatorColor = Color.Transparent,
-                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                        disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    ),
-                    leadingIcon = {
-                        Icon(Icons.Default.Lock, contentDescription = "Read-only")
-                    },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // Account Number
+                if (isManual) {
+                    TextField(
+                        value = accountNumberText,
+                        onValueChange = { accountNumberText = it },
+                        label = { Text("Account Number") },
+                        leadingIcon = {
+                            Icon(Icons.Default.Tag, contentDescription = null)
+                        },
+                        supportingText = { Text("Last 4 digits used as account ID") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    TextField(
+                        value = "••${account.accountLast4}",
+                        onValueChange = {},
+                        label = { Text("Account Number") },
+                        enabled = false,
+                        colors = TextFieldDefaults.colors(
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            disabledIndicatorColor = Color.Transparent,
+                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        leadingIcon = {
+                            Icon(Icons.Default.Lock, contentDescription = "Read-only")
+                        },
+                        supportingText = { Text("Locked — sourced from SMS") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
-                // Currency (editable — lets an existing account switch currency)
+                // Currency (editable — tap to change)
                 Column {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showCurrencyMenu = true },
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    OutlinedButton(
+                        onClick = { showCurrencyMenu = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.small,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            horizontal = Spacing.md, vertical = Spacing.sm
                         )
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Currency",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "$currencyText   ${CurrencyFormatter.getCurrencySymbol(currencyText)}",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+                        Icon(
+                            Icons.Default.CurrencyExchange,
+                            contentDescription = null,
+                            modifier = Modifier.size(Dimensions.Icon.small)
+                        )
+                        Spacer(modifier = Modifier.width(Spacing.sm))
+                        Text(
+                            text = "Currency",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = "$currencyText  ${CurrencyFormatter.getCurrencySymbol(currencyText)}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.width(Spacing.xs))
+                        Icon(
+                            Icons.Default.ArrowDropDown,
+                            contentDescription = "Select currency",
+                            modifier = Modifier.size(Dimensions.Icon.medium)
+                        )
                     }
                     DropdownMenu(
                         expanded = showCurrencyMenu,
@@ -2306,7 +2324,8 @@ private fun EditAccountDialog(
                     val creditLimit = if (account.isCreditCard) {
                         creditLimitText.toBigDecimalOrNull()
                     } else null
-                    onConfirm(bankNameText, balance, creditLimit, currencyText)
+                    val newLast4 = if (isManual) accountNumberText else account.accountLast4
+                    onConfirm(bankNameText, newLast4, balance, creditLimit, currencyText)
                 },
                 enabled = isValid
             ) {

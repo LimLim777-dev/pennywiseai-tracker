@@ -744,6 +744,7 @@ class ManageAccountsViewModel @Inject constructor(
         oldBankName: String,
         accountLast4: String,
         newBankName: String,
+        newAccountLast4: String = accountLast4,
         newBalance: BigDecimal,
         newCreditLimit: BigDecimal?,
         isCreditCard: Boolean,
@@ -767,22 +768,30 @@ class ManageAccountsViewModel @Inject constructor(
                     }
                 }
 
+                // Update account last4 if changed (manual accounts only)
+                val effectiveLast4 = if (newAccountLast4 != accountLast4) {
+                    accountBalanceRepository.updateAccountLast4(newBankName, accountLast4, newAccountLast4)
+                    newAccountLast4
+                } else {
+                    accountLast4
+                }
+
                 // Get existing balance to preserve profileId and other properties
-                val latestBalance = accountBalanceRepository.getLatestBalance(newBankName, accountLast4)
+                val latestBalance = accountBalanceRepository.getLatestBalance(newBankName, effectiveLast4)
                 val resolvedCurrency = newCurrency ?: CurrencyFormatter.resolveAccountCurrency(
                     sourceType = latestBalance?.sourceType,
                     storedCurrency = latestBalance?.currency ?: "INR",
                     bankName = newBankName
                 )
 
-                if (!isCreditCard && accountBalanceRepository.isManualAccount(newBankName, accountLast4)) {
+                if (!isCreditCard && accountBalanceRepository.isManualAccount(newBankName, effectiveLast4)) {
                     // Manual/cash account: balance is derived. Atomically update the
                     // currency on its anchor rows and back-solve the opening from the
                     // typed balance (option b) instead of inserting a snapshot the next
                     // recompute would overwrite.
                     accountBalanceRepository.updateManualBalanceAndCurrency(
                         bankName = newBankName,
-                        accountLast4 = accountLast4,
+                        accountLast4 = effectiveLast4,
                         currency = resolvedCurrency,
                         targetBalance = newBalance
                     )
@@ -791,7 +800,7 @@ class ManageAccountsViewModel @Inject constructor(
                     accountBalanceRepository.insertBalance(
                         AccountBalanceEntity(
                             bankName = newBankName,
-                            accountLast4 = accountLast4,
+                            accountLast4 = effectiveLast4,
                             balance = newBalance,
                             creditLimit = newCreditLimit,
                             timestamp = LocalDateTime.now(),

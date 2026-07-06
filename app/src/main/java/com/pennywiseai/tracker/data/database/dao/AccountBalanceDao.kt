@@ -226,6 +226,15 @@ interface AccountBalanceDao {
     @Query("UPDATE account_balances SET profile_id = :profileId WHERE bank_name = :bankName AND account_last4 = :accountLast4")
     suspend fun setAccountProfile(bankName: String, accountLast4: String, profileId: Long): Int
 
+    @Query("UPDATE account_balances SET account_last4 = :newLast4 WHERE bank_name = :bankName AND account_last4 = :oldLast4")
+    suspend fun updateAccountLast4(bankName: String, oldLast4: String, newLast4: String): Int
+
+    @Query("UPDATE account_balances SET currency = :currency WHERE bank_name = :bankName AND account_last4 = :accountLast4")
+    suspend fun updateAccountCurrency(bankName: String, accountLast4: String, currency: String): Int
+
+    @Query("UPDATE account_balances SET is_credit_card = :isCreditCard, credit_limit = :creditLimit WHERE bank_name = :bankName AND account_last4 = :accountLast4")
+    suspend fun updateAccountCreditCardType(bankName: String, accountLast4: String, isCreditCard: Boolean, creditLimit: BigDecimal?): Int
+
     @Query("UPDATE account_balances SET alias = :alias WHERE bank_name = :bankName AND account_last4 = :accountLast4")
     suspend fun setAccountAlias(bankName: String, accountLast4: String, alias: String?): Int
 
@@ -271,9 +280,6 @@ interface AccountBalanceDao {
 
     @Query("UPDATE account_balances SET balance = :balance, timestamp = :timestamp WHERE id = :id")
     suspend fun updateBalanceAndTimestampById(id: Long, balance: BigDecimal, timestamp: LocalDateTime)
-
-    @Query("UPDATE account_balances SET currency = :currency WHERE bank_name = :bankName AND account_last4 = :accountLast4")
-    suspend fun updateAccountCurrency(bankName: String, accountLast4: String, currency: String): Int
 
     /**
      * Count of SMS-sourced balance rows for an account. Real bank SMS balances always
