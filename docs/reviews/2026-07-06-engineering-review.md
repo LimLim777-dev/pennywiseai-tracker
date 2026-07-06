@@ -1,13 +1,13 @@
 # Engineering Review — 2026-07-06 (Fable 5 session)
 
-> **Status update (same day):** C2, C3, H1, H2, H3, H6, M-A1, M-D1, M5 and
-> the top frontend items are FIXED (see STATE.md batches 1–4; builds +
-> full unit suite green). Still open: C1 (tombstone, 🔴 needs explicit
-> user OK + migration plan), H4 (dead-letter), H5 (prefs into backup),
-> M-R1/M-R2, dual-navigation merge, and the doc-deviation list D1–D8.
-> C3 note: the atomic trio landed (insert + rule audit + subscription
-> advance in one Room transaction, advance after confirmed insert);
-> a lastPaidAt same-cycle guard remains available as optional hardening.
+> **Status (2026-07-07):** C2, C3, H1–H6, M-A1, M-D1, M-D2, M5, D1–D8 and
+> the top frontend items are ALL FIXED (STATE.md batches 1–9; builds +
+> unit suites green). **The only open Critical/High is C1** (tombstone,
+> 🔴 needs explicit user OK + migration plan). Remaining Mediums:
+> M-R1 (screenshot path into pipeline), M-R2 (OCR parseText extraction —
+> needs the original OCR sample texts re-collected via the TNG OCR Debug
+> tool before pinning tests), M6 dual-navigation merge (do before the
+> Investment tab), paging (deferred until felt).
 
 > Full-codebase review against the documented architecture (docs/ +
 > docs/HARNESS/). Condensed to what future sessions need to act. Severity:
