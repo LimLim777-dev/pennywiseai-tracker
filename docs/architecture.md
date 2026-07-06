@@ -199,7 +199,8 @@ class HomeViewModel @Inject constructor(
 ### Data Protection
 - On-device processing only
 - No network calls without consent
-- Encrypted preferences with DataStore
+- Preferences via DataStore / SharedPreferences (NOT encrypted at rest;
+  backup exports are plain JSON containing full transaction + message data)
 
 ### Permissions
 - Runtime permission requests
@@ -230,12 +231,12 @@ class HomeViewModel @Inject constructor(
 - Fallback strategies
 - Data integrity checks
 
-### Feature Flags
+### Feature Flags (aspirational — none of this exists today)
 - Gradual rollout support
 - A/B testing capability
 - Remote configuration ready
 
-## Monitoring & Analytics
+## Monitoring & Analytics (aspirational — no crash reporting or metrics exist; errors go to logcat only)
 
 ### Performance Monitoring
 - App startup time

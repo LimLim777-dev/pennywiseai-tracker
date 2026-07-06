@@ -1,5 +1,12 @@
 # PennyWise Project Context
 
+## ⛳ START HERE — Development Harness (this fork)
+This fork is maintained system-driven, not prompt-driven. **Before doing any
+task, read `docs/HARNESS/README.md`** (routing table → workflow → task
+pattern) **and `docs/HARNESS/STATE.md`** (live project state; it overrides AI
+memory and older handover docs). Safety zones in `docs/HARNESS/SAFETY_RULES.md`
+govern what may be changed without asking.
+
 ## Project Overview
 PennyWise is a minimalist, AI-powered expense tracker for Android that automatically extracts transaction data from SMS messages using on-device processing.
 
@@ -7,7 +14,6 @@ PennyWise is a minimalist, AI-powered expense tracker for Android that automatic
 Please reference these documents when working on this project:
 - **Architecture**: `/docs/architecture.md` - MVVM + Clean Architecture patterns, layer responsibilities
 - **Design System**: `/docs/design.md` - Material 3 theming, colors, typography, components
-- **PRD**: `/prd.md` - Product requirements, features, timeline
 - **Backup & Restore**: `/docs/backup-format.md` - Backup JSON format + the forward/backward compatibility contract. **Read this before changing anything a backup serializes** (entities, `data/backup/`).
 
 ## Key Technical Decisions
