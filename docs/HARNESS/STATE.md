@@ -67,6 +67,13 @@ building new pipeline-dependent features.
   + retention; merge dual navigation BEFORE building the Investment tab.
   On-device check for (8): pick a TNG screenshot → edit the amount in the
   dialog → saved transaction shows the edited amount.
+- **Eighth batch DONE 2026-07-07**: (18) **H4 dead-letter landed** — an SMS
+  that parses but fails to SAVE (exception or unexpected non-dup failure)
+  is now recorded into `unrecognized_sms` (unique sender+body dedups
+  repeats) and surfaces on the Unrecognized SMS screen; duplicates/blocked/
+  previously-deleted results are NOT dead-lettered. Review remaining: C1
+  (🔴), H5 (prefs into backup), M-R1/M-R2, dual-nav merge, docs D-items
+  already fixed.
 - **Seventh batch DONE 2026-07-07**: (17) Settings → **PDF Text Debug** —
   pick any PDF, view/copy the runtime PDFBox extraction (SelectionContainer,
   monospace). This is the fixture-collection tool for T-P1 payslip parser

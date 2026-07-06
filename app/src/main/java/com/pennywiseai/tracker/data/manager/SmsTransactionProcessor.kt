@@ -16,8 +16,10 @@ import com.pennywiseai.tracker.data.mapper.toEntityType
 import com.pennywiseai.tracker.data.repository.AccountBalanceRepository
 import com.pennywiseai.tracker.data.repository.CardRepository
 import com.pennywiseai.tracker.data.repository.MerchantMappingRepository
+import com.pennywiseai.tracker.data.database.entity.UnrecognizedSmsEntity
 import com.pennywiseai.tracker.data.repository.SubscriptionRepository
 import com.pennywiseai.tracker.data.repository.TransactionRepository
+import com.pennywiseai.tracker.data.repository.UnrecognizedSmsRepository
 import com.pennywiseai.tracker.domain.repository.RuleRepository
 import com.pennywiseai.tracker.domain.service.RuleEngine
 import java.math.BigDecimal
@@ -42,7 +44,8 @@ class SmsTransactionProcessor @Inject constructor(
     private val merchantMappingRepository: MerchantMappingRepository,
     private val subscriptionRepository: SubscriptionRepository,
     private val ruleRepository: RuleRepository,
-    private val ruleEngine: RuleEngine
+    private val ruleEngine: RuleEngine,
+    private val unrecognizedSmsRepository: UnrecognizedSmsRepository
 ) {
     companion object {
         private const val TAG = "SmsTransactionProcessor"
@@ -88,10 +91,37 @@ class SmsTransactionProcessor @Inject constructor(
             Log.d(TAG, "Parsed transaction: ${parsedTransaction.amount} from ${parsedTransaction.bankName}")
 
             // Save the transaction
-            return saveParsedTransaction(parsedTransaction, body)
+            val result = saveParsedTransaction(parsedTransaction, body)
+            // Dead-letter: a message that PARSED but failed to SAVE is silent
+            // data loss with no trace. Record it so the unrecognized-SMS screen
+            // surfaces it for diagnosis (unique(sender, body) dedups repeats).
+            if (!result.success && result.reason?.startsWith("Duplicate") != true &&
+                result.reason?.startsWith("Blocked") != true &&
+                result.reason?.startsWith("Transaction was previously deleted") != true
+            ) {
+                deadLetter(sender, body, timestamp)
+            }
+            return result
         } catch (e: Exception) {
             Log.e(TAG, "Error processing SMS", e)
+            deadLetter(sender, body, timestamp)
             return ProcessingResult(false, reason = e.message)
+        }
+    }
+
+    private suspend fun deadLetter(sender: String, body: String, timestamp: Long) {
+        try {
+            unrecognizedSmsRepository.insert(
+                UnrecognizedSmsEntity(
+                    sender = sender,
+                    smsBody = body,
+                    receivedAt = LocalDateTime.ofInstant(
+                        Instant.ofEpochMilli(timestamp), ZoneId.systemDefault()
+                    )
+                )
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to dead-letter SMS from $sender", e)
         }
     }
 
