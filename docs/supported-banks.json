@@ -1,6 +1,6 @@
 {
-  "totalBanks": 129,
-  "totalCountries": 22,
+  "totalBanks": 137,
+  "totalCountries": 23,
   "countries": [
     {
       "country": "India",
@@ -25,6 +25,14 @@
       "symbol": "$",
       "bankCount": 10,
       "banks": ["ALECU", "AdelFi", "Altana Federal Credit Union", "Charles Schwab", "Chase", "Citi Bank", "Discover Card", "Huntington Bank", "Navy Federal Credit Union", "Old Hickory Credit Union"]
+    },
+    {
+      "country": "Malaysia",
+      "flag": "🇲🇾",
+      "currency": "MYR",
+      "symbol": "RM",
+      "bankCount": 8,
+      "banks": ["Boost Bank", "GXBank", "Maybank2u", "Public Bank", "Ryt Bank", "ShopeePay", "TNG eWallet", "UOB"]
     },
     {
       "country": "Nepal",

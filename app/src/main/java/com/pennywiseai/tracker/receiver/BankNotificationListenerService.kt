@@ -87,8 +87,11 @@ class BankNotificationListenerService : NotificationListenerService() {
                 // Cross-dedup: check if SMS already created this transaction.
                 // Parse first to get amount, then look for an existing transaction
                 // with the same amount within a ±2-minute window.
-                val parser = BankParserFactory.getParser(senderAlias)
-                val parsed = parser?.parse(body, senderAlias, timestamp)
+                // Content-aware dispatch (like the processor): single-parser
+                // resolution can be shadowed by sender-ID overlaps (e.g. T-Bank
+                // vs BoostBank), which silently skipped this whole pre-pass.
+                val parsed = BankParserFactory.getParsers(senderAlias)
+                    .firstNotNullOfOrNull { it.parse(body, senderAlias, timestamp) }
                 if (parsed != null) {
                     val eventTime = LocalDateTime.ofInstant(
                         Instant.ofEpochMilli(timestamp), ZoneId.systemDefault()

@@ -48,6 +48,7 @@ class SupportedBanksDocTest {
         "TRY" to CountryMeta("Turkey", "🇹🇷", "₺"),
         "OMR" to CountryMeta("Oman", "🇴🇲", "ر.ع."),
         "EUR" to CountryMeta("Eurozone", "🇪🇺", "€"),
+        "MYR" to CountryMeta("Malaysia", "🇲🇾", "RM"),
     )
 
     private data class CountryGroup(

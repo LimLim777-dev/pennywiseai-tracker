@@ -156,12 +156,29 @@ building new pipeline-dependent features.
   tests green; next UOB step is T-C3 (screen + wiring; apply exclusions +
   mapper before calling the engine). Final APK of the day builds clean
   with everything included.
-- **`SupportedBanksDocTest` red**: `currencyMeta` map lacks MYR. Fix per W1
-  step 7 (`"MYR" to CountryMeta("Malaysia", "🇲🇾", "RM")`), regenerate
-  `docs/supported-banks.json`.
-- **Old Malaysian tests location**: `TestMalaysianParsers.kt` predates the
-  per-parser standard; new tests go in per-parser classes. Migration is
-  optional cleanup, W4-gated.
+- ~~SupportedBanksDocTest red~~ **FIXED 2026-07-07**: MYR added to
+  currencyMeta; `docs/supported-banks.json` regenerated — Malaysia section
+  now lists all 8 fork parsers. Test green.
+- **`MalaysianParsersTest` 7/13 red — PRE-EXISTING** (verified: identical
+  failures at pre-session commit e0abbea5 via throwaway worktree; the
+  2026-07-06/07 changes caused none of them). The old root-level
+  `TestMalaysianParsers.kt` uses FABRICATED message samples (violates the
+  W1 precondition) that drifted from the fork's parsers, while REAL
+  on-device behavior for TNG/MAE/Boost is user-verified. Resolution:
+  migrate to per-parser classes with REAL samples (W4-gated; samples on
+  file: TNG OCR set, jar withdraw, Maybank loan payment). Do NOT bend
+  parsers to satisfy fabricated fixtures.
+  **The other 3 of the original 10 were a REAL bug, FIXED 2026-07-07**:
+  `TBankParser.canHandle` substring-matched "TBANK", which "BOOSTBANK" and
+  "RYTBANK" contain — and T-Bank registers before them in the factory, so
+  single-parser resolution returned T-Bank for Boost/Ryt aliases. Capture
+  survived (processor uses content-aware getParsers) but the notification
+  listener's PRE-PASS used getParser → parse=null → the ±2-min
+  cross-channel dedup AND the Boost INCOME→TRANSFER cross-bank
+  reclassification (DOMAIN_MODEL §1 edge case 2) were **silently dead for
+  Boost/Ryt**. Fixed: T-Bank canHandle now word-boundary; listener
+  pre-pass now content-aware like the processor. On-device recheck: send
+  RM1 GXBank→Boost; expect one TRANSFER, no INCOME row.
 
 ## Blocked on user input
 

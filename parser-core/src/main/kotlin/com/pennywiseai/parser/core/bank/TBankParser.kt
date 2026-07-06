@@ -23,8 +23,10 @@ class TBankParser : BankParser() {
 
     override fun canHandle(sender: String): Boolean {
         val normalized = sender.uppercase()
-        return normalized.contains("TBANK") ||
-                normalized.contains("T-BANK") ||
+        // Word-boundary match on TBANK: plain substring matching also hits
+        // "BOOSTBANK" and "RYTBANK" (Malaysian senders), shadowing those
+        // parsers in single-parser resolution because T-Bank registers first.
+        return Regex("""(^|[^A-Z])T-?BANK($|[^A-Z])""").containsMatchIn(normalized) ||
                 normalized.contains("TINKOFF")
     }
 
