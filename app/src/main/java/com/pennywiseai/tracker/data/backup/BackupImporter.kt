@@ -241,6 +241,9 @@ class BackupImporter @Inject constructor(
                 backup.database.bankNotifications.insertEachCounting({ skippedRows++ }) { notification ->
                     database.bankNotificationDao().insertOrReplace(notification)
                 }
+                backup.database.deletedTransactionHashes.insertEachCounting({ skippedRows++ }) { tombstone ->
+                    database.deletedHashDao().insert(tombstone)
+                }
 
                 // Profiles were already imported earlier (before transactions /
                 // account balances) so foreign-key remapping could happen.
@@ -440,6 +443,9 @@ class BackupImporter @Inject constructor(
                 }
                 backup.database.bankNotifications.insertEachCounting({ skippedRows++ }) { notification ->
                     database.bankNotificationDao().insertOrReplace(notification)
+                }
+                backup.database.deletedTransactionHashes.insertEachCounting({ skippedRows++ }) { tombstone ->
+                    database.deletedHashDao().insert(tombstone)
                 }
 
                 // Profiles were already imported earlier (before transactions /

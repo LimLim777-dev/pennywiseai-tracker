@@ -66,7 +66,18 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 val database = PennyWiseDatabase.getInstance(context)
                 val transactionDao = database.transactionDao()
 
-                // Soft delete the transaction
+                // User-initiated delete → tombstone the original hash first so a
+                // future SMS rescan doesn't resurrect it (review C1), then soft
+                // delete (which renames the row's hash).
+                transactionDao.getTransactionById(transactionId)?.let { txn ->
+                    if (!txn.transactionHash.startsWith("DELETED_") && txn.transactionHash.isNotBlank()) {
+                        database.deletedHashDao().insert(
+                            com.pennywiseai.tracker.data.database.entity.DeletedHashEntity(
+                                hash = txn.transactionHash
+                            )
+                        )
+                    }
+                }
                 transactionDao.softDeleteTransaction(transactionId)
                 Log.d(TAG, "Deleted transaction: $transactionId")
 

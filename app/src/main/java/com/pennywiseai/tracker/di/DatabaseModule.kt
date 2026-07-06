@@ -260,6 +260,12 @@ object DatabaseModule {
     fun provideProfileDao(database: PennyWiseDatabase): ProfileDao {
         return database.profileDao()
     }
+
+    @Provides
+    @Singleton
+    fun provideDeletedHashDao(database: PennyWiseDatabase): com.pennywiseai.tracker.data.database.dao.DeletedHashDao {
+        return database.deletedHashDao()
+    }
 }
 
 /**

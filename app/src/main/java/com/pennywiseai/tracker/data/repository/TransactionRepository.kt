@@ -1,7 +1,11 @@
 package com.pennywiseai.tracker.data.repository
 
+import androidx.room.withTransaction
+import com.pennywiseai.tracker.data.database.PennyWiseDatabase
+import com.pennywiseai.tracker.data.database.dao.DeletedHashDao
 import com.pennywiseai.tracker.data.database.dao.TransactionDao
 import com.pennywiseai.tracker.data.database.dao.TransactionSplitDao
+import com.pennywiseai.tracker.data.database.entity.DeletedHashEntity
 import com.pennywiseai.tracker.data.database.entity.TransactionEntity
 import com.pennywiseai.tracker.data.database.entity.TransactionSplitEntity
 import com.pennywiseai.tracker.data.database.entity.TransactionType
@@ -20,8 +24,10 @@ import kotlin.math.min
 
 @Singleton
 class TransactionRepository @Inject constructor(
+    private val database: PennyWiseDatabase,
     private val transactionDao: TransactionDao,
-    private val transactionSplitDao: TransactionSplitDao
+    private val transactionSplitDao: TransactionSplitDao,
+    private val deletedHashDao: DeletedHashDao
 ) {
     fun getAllTransactions(): Flow<List<TransactionEntity>> = 
         transactionDao.getAllTransactions()
@@ -111,7 +117,7 @@ class TransactionRepository @Inject constructor(
         if (hardDelete) {
             transactionDao.deleteTransaction(transaction)
         } else {
-            transactionDao.softDeleteTransaction(transaction.id)
+            softDeleteWithTombstone(transaction.id)
         }
     }
 
@@ -119,9 +125,30 @@ class TransactionRepository @Inject constructor(
         if (hardDelete) {
             transactionDao.deleteTransactionById(id)
         } else {
+            softDeleteWithTombstone(id)
+        }
+    }
+
+    /**
+     * User-initiated delete = tombstone the ORIGINAL hash + soft delete, in
+     * one transaction (review C1). The soft delete renames the row's hash
+     * (freeing it for manual re-adds); the tombstone is what stops a full
+     * SMS rescan from resurrecting the deleted transaction. Rescan-rebuild
+     * hard deletes intentionally do NOT tombstone — they exist to re-import.
+     */
+    private suspend fun softDeleteWithTombstone(id: Long) {
+        database.withTransaction {
+            transactionDao.getTransactionById(id)?.let { txn ->
+                if (!txn.transactionHash.startsWith("DELETED_") && txn.transactionHash.isNotBlank()) {
+                    deletedHashDao.insert(DeletedHashEntity(hash = txn.transactionHash))
+                }
+            }
             transactionDao.softDeleteTransaction(id)
         }
     }
+
+    /** True when the user previously deleted a transaction with this hash. */
+    suspend fun isHashTombstoned(hash: String): Boolean = deletedHashDao.exists(hash)
 
     suspend fun deleteAllTransactions() =
         transactionDao.deleteAllTransactions()

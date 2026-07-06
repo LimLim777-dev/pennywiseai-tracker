@@ -26,6 +26,7 @@ import com.pennywiseai.tracker.data.database.dao.TransactionGroupDao
 import com.pennywiseai.tracker.data.database.dao.RuleApplicationDao
 import com.pennywiseai.tracker.data.database.dao.RuleDao
 import com.pennywiseai.tracker.data.database.dao.SubscriptionDao
+import com.pennywiseai.tracker.data.database.dao.DeletedHashDao
 import com.pennywiseai.tracker.data.database.dao.TransactionDao
 import com.pennywiseai.tracker.data.database.dao.TransactionSplitDao
 import com.pennywiseai.tracker.data.database.dao.UnrecognizedSmsDao
@@ -46,6 +47,7 @@ import com.pennywiseai.tracker.data.database.entity.TransactionGroupEntity
 import com.pennywiseai.tracker.data.database.entity.RuleApplicationEntity
 import com.pennywiseai.tracker.data.database.entity.RuleEntity
 import com.pennywiseai.tracker.data.database.entity.SubscriptionEntity
+import com.pennywiseai.tracker.data.database.entity.DeletedHashEntity
 import com.pennywiseai.tracker.data.database.entity.TransactionEntity
 import com.pennywiseai.tracker.data.database.entity.TransactionSplitEntity
 import com.pennywiseai.tracker.data.database.entity.UnrecognizedSmsEntity
@@ -57,7 +59,7 @@ import com.pennywiseai.tracker.data.database.entity.UnrecognizedSmsEntity
  * that needs to record the version it was exported against. Bump this in lock-
  * step with any schema change.
  */
-const val SCHEMA_VERSION = 56
+const val SCHEMA_VERSION = 57
 
 /**
  * The PennyWise Room database.
@@ -70,7 +72,7 @@ const val SCHEMA_VERSION = 56
  * @property autoMigrations List of automatic migrations between versions.
  */
 @Database(
-    entities = [TransactionEntity::class, SubscriptionEntity::class, ChatMessage::class, MerchantMappingEntity::class, CategoryEntity::class, AccountBalanceEntity::class, UnrecognizedSmsEntity::class, CardEntity::class, RuleEntity::class, RuleApplicationEntity::class, ExchangeRateEntity::class, BudgetEntity::class, BudgetCategoryEntity::class, BudgetMonthSnapshotEntity::class, BudgetCategoryMonthSnapshotEntity::class, TransactionSplitEntity::class, BankNotificationEntity::class, LoanEntity::class, TransactionGroupEntity::class, ProfileEntity::class],
+    entities = [TransactionEntity::class, SubscriptionEntity::class, ChatMessage::class, MerchantMappingEntity::class, CategoryEntity::class, AccountBalanceEntity::class, UnrecognizedSmsEntity::class, CardEntity::class, RuleEntity::class, RuleApplicationEntity::class, ExchangeRateEntity::class, BudgetEntity::class, BudgetCategoryEntity::class, BudgetMonthSnapshotEntity::class, BudgetCategoryMonthSnapshotEntity::class, TransactionSplitEntity::class, BankNotificationEntity::class, LoanEntity::class, TransactionGroupEntity::class, ProfileEntity::class, DeletedHashEntity::class],
     version = SCHEMA_VERSION,
     exportSchema = true,
     autoMigrations = [
@@ -140,6 +142,7 @@ abstract class PennyWiseDatabase : RoomDatabase() {
     abstract fun transactionGroupDao(): TransactionGroupDao
     abstract fun budgetSnapshotDao(): BudgetSnapshotDao
     abstract fun profileDao(): ProfileDao
+    abstract fun deletedHashDao(): DeletedHashDao
 
     companion object {
         const val DATABASE_NAME = "pennywise_database"
@@ -537,6 +540,38 @@ abstract class PennyWiseDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Tombstones for user-deleted transactions (review C1, user-approved
+         * 2026-07-07). Soft delete renames the hash to DELETED_<id>_<hash>,
+         * freeing the original — a full SMS rescan would resurrect the row.
+         * This table records the ORIGINAL hash so ingestion can skip it.
+         * Backfills tombstones for rows already soft-deleted, recovering the
+         * original hash by stripping the DELETED_<id>_ prefix.
+         */
+        val MIGRATION_56_57 = object : Migration(56, 57) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `deleted_transaction_hashes` (
+                        `hash` TEXT NOT NULL,
+                        `deleted_at` TEXT NOT NULL,
+                        PRIMARY KEY(`hash`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    INSERT OR IGNORE INTO deleted_transaction_hashes (hash, deleted_at)
+                    SELECT substr(transaction_hash, length('DELETED_' || CAST(id AS TEXT) || '_') + 1),
+                           updated_at
+                    FROM transactions
+                    WHERE is_deleted = 1
+                      AND transaction_hash LIKE 'DELETED\_%' ESCAPE '\'
+                    """.trimIndent()
+                )
+            }
+        }
+
         val MIGRATION_38_39 = object : Migration(38, 39) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Add receipt_path to transactions if missing
@@ -592,6 +627,7 @@ abstract class PennyWiseDatabase : RoomDatabase() {
             MIGRATION_52_53,
             MIGRATION_53_54,
             MIGRATION_54_55,
+            MIGRATION_56_57,
         )
     }
     

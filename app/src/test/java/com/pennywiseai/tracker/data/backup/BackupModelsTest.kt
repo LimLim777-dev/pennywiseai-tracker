@@ -533,6 +533,41 @@ class BackupModelsTest {
     }
 
     /**
+     * Deleted-transaction tombstones (review C1, 2026-07-07). An older backup
+     * without the table decodes to an empty list; a backup carrying it
+     * round-trips the original hashes.
+     */
+    @Test
+    fun deletedHashTombstones_defaultEmptyAndRoundTrip() {
+        val old = backupJson.decodeFromString<PennyWiseBackup>(
+            """
+            {
+              "_format": "PennyWise Backup v1.0",
+              "metadata": { "export_id": "old", "app_version": "2.0.0" },
+              "database": {}
+            }
+            """.trimIndent()
+        )
+        assertTrue(old.database.deletedTransactionHashes.isEmpty())
+
+        val withTombstones = backupJson.decodeFromString<PennyWiseBackup>(
+            """
+            {
+              "_format": "PennyWise Backup v1.2",
+              "metadata": { "export_id": "new", "app_version": "2.1.3" },
+              "database": {
+                "deleted_transaction_hashes": [
+                  { "hash": "abc123", "deletedAt": "2026-07-07T10:00:00" }
+                ]
+              }
+            }
+            """.trimIndent()
+        )
+        val tombstone = withTombstones.database.deletedTransactionHashes.single()
+        assertEquals("abc123", tombstone.hash)
+    }
+
+    /**
      * #509 regression. An older backup's account_balances row predates the
      * per-account `lowBalanceThreshold` column, so the key is simply absent.
      * It must default to null (alert off), not crash the restore. A second row

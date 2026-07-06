@@ -62,11 +62,15 @@ manual entry. It is a *record of what happened*, never a plan or a reminder.
   of all stats — the user-facing escape hatch for misclassified rows.
 - `isDeleted` is a soft delete **that also renames `transactionHash` to
   `DELETED_<id>_<hash>`** (frees the hash so the same details can be re-added
-  manually). ⚠️ Known consequence (review 2026-07-06, C1 — open): because the
-  original hash is freed, a full SMS rescan re-inserts user-deleted
-  transactions. Hard deletes DO exist: `deleteUncuratedTransactions` (full
-  rescan rebuild, #401), `deleteAllTransactions`, and explicit
-  `hardDelete = true` paths.
+  manually). A user-initiated delete simultaneously writes the ORIGINAL hash
+  into the `deleted_transaction_hashes` **tombstone table** (v57, review C1);
+  the ingestion pipeline skips any parsed message whose hash is tombstoned,
+  so a full SMS rescan never resurrects user-deleted transactions. Manual
+  adds use different hash schemes and are unaffected. Tombstones are
+  included in backups (all privacy modes — opaque hashes, no PII). Hard
+  deletes DO exist and intentionally do NOT tombstone:
+  `deleteUncuratedTransactions` (full rescan rebuild, #401) and
+  `deleteAllTransactions` exist to re-import.
 - Every field serialized into backups must keep a Kotlin default value
   (backup compatibility contract — `docs/backup-format.md`, enforced by
   `BackupSchemaGuardTest`).

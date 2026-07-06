@@ -72,6 +72,7 @@ class BackupExporter @Inject constructor(
         val profiles = database.profileDao().getAllProfiles()
         val budgetMonthSnapshots = database.budgetSnapshotDao().getAllGroupSnapshots()
         val budgetCategoryMonthSnapshots = database.budgetSnapshotDao().getAllCategorySnapshots()
+        val deletedTransactionHashes = database.deletedHashDao().getAll()
         
         // Get preferences from repository
         val prefs = userPreferencesRepository.userPreferences.first()
@@ -172,7 +173,10 @@ class BackupExporter @Inject constructor(
                 transactionGroups = exportedTransactionGroups,
                 profiles = exportedProfiles,
                 budgetMonthSnapshots = exportedBudgetMonthSnapshots,
-                budgetCategoryMonthSnapshots = exportedBudgetCategoryMonthSnapshots
+                budgetCategoryMonthSnapshots = exportedBudgetCategoryMonthSnapshots,
+                // Tombstones carry only opaque hashes (no PII) — include in all
+                // privacy modes so a restore never resurrects deleted rows.
+                deletedTransactionHashes = deletedTransactionHashes
             ),
             preferences = PreferencesSnapshot(
                 theme = ThemePreferences(

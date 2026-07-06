@@ -141,14 +141,18 @@ class SmsTransactionProcessor @Inject constructor(
             // Convert to entity
             val entity = parsedTransaction.toEntity()
 
-            // Check if this transaction was previously deleted by the user
+            // Tombstone check (review C1): soft delete renames the row's hash,
+            // so the row itself can't be found by the original hash — the
+            // tombstone table is what remembers user-deleted transactions and
+            // keeps a full SMS rescan from resurrecting them.
+            if (transactionRepository.isHashTombstoned(entity.transactionHash)) {
+                Log.d(TAG, "Skipping previously deleted transaction with hash: ${entity.transactionHash}")
+                return ProcessingResult(false, reason = "Transaction was previously deleted")
+            }
+
             val existingTransaction = transactionRepository.getTransactionByHash(entity.transactionHash)
             if (existingTransaction != null) {
-                if (existingTransaction.isDeleted) {
-                    Log.d(TAG, "Skipping previously deleted transaction with hash: ${entity.transactionHash}")
-                    return ProcessingResult(false, reason = "Transaction was previously deleted")
-                }
-                // Transaction already exists and not deleted - normal deduplication
+                // Transaction already exists - normal deduplication
                 Log.d(TAG, "Transaction already exists: ${entity.transactionHash}")
                 return ProcessingResult(false, reason = "Duplicate transaction")
             }

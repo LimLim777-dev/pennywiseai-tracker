@@ -1,9 +1,9 @@
 # Engineering Review — 2026-07-06 (Fable 5 session)
 
-> **Status (2026-07-07):** C2, C3, H1–H6, M-A1, M-D1, M-D2, M5, D1–D8 and
-> the top frontend items are ALL FIXED (STATE.md batches 1–9; builds +
-> unit suites green). **The only open Critical/High is C1** (tombstone,
-> 🔴 needs explicit user OK + migration plan). Remaining Mediums:
+> **Status (2026-07-07):** C1 (tombstone — user approved "做"), C2, C3,
+> H1–H6, M-A1, M-D1, M-D2, M5, D1–D8 and the top frontend items are ALL
+> FIXED (STATE.md batches 1–10; builds + unit suites green). **Every
+> Critical and High finding in this review is now closed.** Remaining Mediums:
 > M-R1 (screenshot path into pipeline), M-R2 (OCR parseText extraction —
 > needs the original OCR sample texts re-collected via the TNG OCR Debug
 > tool before pinning tests), M6 dual-navigation merge (do before the

@@ -215,7 +215,10 @@ data class DatabaseSnapshot(
     val budgetMonthSnapshots: List<BudgetMonthSnapshotEntity> = emptyList(),
 
     @SerialName("budget_category_month_snapshots")
-    val budgetCategoryMonthSnapshots: List<BudgetCategoryMonthSnapshotEntity> = emptyList()
+    val budgetCategoryMonthSnapshots: List<BudgetCategoryMonthSnapshotEntity> = emptyList(),
+
+    @SerialName("deleted_transaction_hashes")
+    val deletedTransactionHashes: List<DeletedHashEntity> = emptyList()
 )
 
 /**

@@ -67,6 +67,18 @@ building new pipeline-dependent features.
   + retention; merge dual navigation BEFORE building the Investment tab.
   On-device check for (8): pick a TNG screenshot → edit the amount in the
   dialog → saved transaction shows the edited amount.
+- **Tenth batch DONE 2026-07-07** (user approved "做"): (20) **C1 tombstone
+  landed** — new `deleted_transaction_hashes` table (schema v57,
+  MIGRATION_56_57 backfills tombstones from existing `DELETED_*` rows);
+  user-initiated deletes (detail screen + notification action) write the
+  ORIGINAL hash atomically with the soft delete; ingestion skips
+  tombstoned hashes → **full SMS rescan no longer resurrects deleted
+  transactions**. Rescan-rebuild hard deletes intentionally don't
+  tombstone. Tombstones ride in backups (all privacy modes; defaults per
+  contract; regression test added). On-device check: delete a captured
+  transaction → Settings rescan → it stays deleted; manually re-adding
+  the same amount/time still works. **Every review Critical/High is now
+  closed.**
 - **Ninth batch DONE 2026-07-07**: (19) **H5 landed** — backup now carries
   `account_ui` (hidden accounts + deleted system rule templates) with
   defaulted fields per the compatibility contract; importer only overwrites
