@@ -109,6 +109,87 @@ class SmsTransactionProcessor @Inject constructor(
         }
     }
 
+    /**
+     * Shared save path for user-confirmed transactions that don't come from a
+     * parsed message (screenshot OCR confirm dialogs — review M-R1). Gives
+     * them the same treatment as the message pipeline: cross-channel dedup,
+     * merchant mapping, rules, subscription matching — atomically.
+     *
+     * Differences from the message path, on purpose:
+     * - NO tombstone check: re-importing a receipt the user deleted is a
+     *   deliberate act and must work.
+     * - Cross-channel dedup window: a same-bank same-amount row within
+     *   ±2 minutes of the receipt's own timestamp means the notification
+     *   channel already recorded this event.
+     */
+    suspend fun saveManualTransaction(entity: TransactionEntity): ProcessingResult {
+        return try {
+            if (transactionRepository.getTransactionByHash(entity.transactionHash) != null) {
+                return ProcessingResult(false, reason = "Duplicate transaction")
+            }
+
+            val windowStart = entity.dateTime.minusMinutes(2)
+            val windowEnd = entity.dateTime.plusMinutes(2)
+            val crossChannel = transactionRepository
+                .getTransactionByAmountAndDate(entity.amount, windowStart, windowEnd)
+                .any { it.bankName == entity.bankName }
+            if (crossChannel) {
+                Log.d(TAG, "Manual save skipped: already captured via another channel")
+                return ProcessingResult(false, reason = "Already recorded from a notification for the same amount and time")
+            }
+
+            val customDisplayName = merchantMappingRepository.getDisplayNameForMerchant(entity.merchantName)
+            val customCategory = merchantMappingRepository.getCategoryForMerchant(entity.merchantName)
+            val entityWithMapping = if (customDisplayName != null || customCategory != null) {
+                entity.copy(
+                    merchantName = customDisplayName ?: entity.merchantName,
+                    category = customCategory ?: entity.category
+                )
+            } else entity
+
+            val activeRules = ruleRepository.getActiveRulesByType(entityWithMapping.transactionType)
+            val (entityWithRules, ruleApplications) = ruleEngine.evaluateRules(entityWithMapping, "", activeRules)
+
+            val matchedSubscription = if (
+                entityWithRules.transactionType == TransactionType.EXPENSE ||
+                entityWithRules.transactionType == TransactionType.CREDIT
+            ) {
+                subscriptionRepository.matchTransactionToSubscription(
+                    entityWithRules.merchantName,
+                    entityWithRules.amount
+                )
+            } else null
+
+            val finalEntity = if (matchedSubscription != null) entityWithRules.copy(isRecurring = true) else entityWithRules
+
+            val rowId = database.withTransaction {
+                val id = transactionRepository.insertTransaction(finalEntity)
+                if (id != -1L) {
+                    if (ruleApplications.isNotEmpty()) {
+                        ruleRepository.saveRuleApplications(ruleApplications)
+                    }
+                    if (matchedSubscription != null) {
+                        subscriptionRepository.updateNextPaymentDateAfterCharge(
+                            matchedSubscription.id,
+                            finalEntity.dateTime.toLocalDate()
+                        )
+                    }
+                }
+                id
+            }
+
+            if (rowId != -1L) {
+                com.pennywiseai.tracker.widget.RecentTransactionsWidgetUpdateWorker.enqueueOneShot(appContext)
+                ProcessingResult(true, transactionId = rowId)
+            } else {
+                ProcessingResult(false, reason = "Duplicate transaction")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving manual transaction", e)
+            ProcessingResult(false, reason = e.message)
+        }
+    }
+
     private suspend fun deadLetter(sender: String, body: String, timestamp: Long) {
         try {
             unrecognizedSmsRepository.insert(

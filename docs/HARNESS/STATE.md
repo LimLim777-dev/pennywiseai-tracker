@@ -67,6 +67,19 @@ building new pipeline-dependent features.
   + retention; merge dual navigation BEFORE building the Investment tab.
   On-device check for (8): pick a TNG screenshot → edit the amount in the
   dialog → saved transaction shows the edited amount.
+- **Eleventh batch DONE 2026-07-07**: (21) **M-R1 landed** — screenshot
+  confirm activities (TNG + ShopeePay) now save through
+  `SmsTransactionProcessor.saveManualTransaction`: cross-channel ±2-min
+  dedup (a late notification for the same receipt no longer double-records
+  — user sees a Toast with the reason), merchant mapping, rules,
+  subscription matching, all atomic. Manual path deliberately skips the
+  tombstone check (re-importing a deleted receipt is a deliberate act).
+  (22) **M-R2 landed** — `TNGScreenshotParser.parseText` +
+  `ShopeePayScreenshotParser.parseText` are pure JVM functions;
+  `TNGScreenshotParserTest` pins 5 regression cases from the real
+  2026-07-06 OCR dumps (names masked). On-device check: screenshot a TNG
+  receipt already captured by notification → Toast "Already recorded…",
+  no duplicate row.
 - **Tenth batch DONE 2026-07-07** (user approved "做"): (20) **C1 tombstone
   landed** — new `deleted_transaction_hashes` table (schema v57,
   MIGRATION_56_57 backfills tombstones from existing `DELETED_*` rows);

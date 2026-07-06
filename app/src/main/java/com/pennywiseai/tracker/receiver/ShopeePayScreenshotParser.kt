@@ -51,6 +51,14 @@ object ShopeePayScreenshotParser {
 
     suspend fun parse(context: Context, imageUri: Uri): ShopeePayParseResult? {
         val text = recognizeText(context, imageUri) ?: return null
+        return parseText(text)
+    }
+
+    /**
+     * Pure OCR-text → result function (review M-R2): JVM-testable so real OCR
+     * dumps become regression fixtures without a device.
+     */
+    fun parseText(text: String): ShopeePayParseResult? {
         val lower = text.lowercase()
 
         // ShopeePay DuitNow transfer: "Transfer Detail" + "Transfer To" + "Successful"

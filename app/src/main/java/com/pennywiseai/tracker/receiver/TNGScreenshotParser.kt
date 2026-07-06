@@ -56,6 +56,14 @@ object TNGScreenshotParser {
     suspend fun parse(context: Context, imageUri: Uri): TNGParseResult? {
         val text = recognizeText(context, imageUri) ?: return null
         Log.d("TNGParser", "OCR text:\n---\n$text\n---")
+        return parseText(text)
+    }
+
+    /**
+     * Pure OCR-text → result function (review M-R2): JVM-testable so real OCR
+     * dumps become regression fixtures without a device.
+     */
+    fun parseText(text: String): TNGParseResult? {
         if (!IS_TNG.containsMatchIn(text)) {
             Log.d("TNGParser", "Not a TNG screenshot (no 'Wallet Ref')")
             return null

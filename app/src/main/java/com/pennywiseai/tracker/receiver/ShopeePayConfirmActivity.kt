@@ -14,10 +14,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.pennywiseai.tracker.data.database.entity.TransactionEntity
 import com.pennywiseai.tracker.data.database.entity.TransactionType
-import com.pennywiseai.tracker.domain.repository.RuleRepository
-import com.pennywiseai.tracker.data.repository.TransactionRepository
+import com.pennywiseai.tracker.data.manager.SmsTransactionProcessor
 import com.pennywiseai.tracker.di.ApplicationScope
-import com.pennywiseai.tracker.domain.service.RuleEngine
 import com.pennywiseai.tracker.ui.theme.PennyWiseTheme
 import com.pennywiseai.tracker.utils.CurrencyFormatter
 import dagger.hilt.android.AndroidEntryPoint
@@ -32,9 +30,7 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class ShopeePayConfirmActivity : ComponentActivity() {
 
-    @Inject lateinit var transactionRepository: TransactionRepository
-    @Inject lateinit var ruleRepository: RuleRepository
-    @Inject lateinit var ruleEngine: RuleEngine
+    @Inject lateinit var smsTransactionProcessor: SmsTransactionProcessor
     @Inject @ApplicationScope lateinit var appScope: CoroutineScope
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -180,18 +176,19 @@ class ShopeePayConfirmActivity : ComponentActivity() {
             currency = "MYR",
             transactionHash = hash,
         )
+        // Shared pipeline path (review M-R1): cross-channel dedup + merchant
+        // mapping + rules + subscription matching, atomically.
         appScope.launch {
-            try {
-                val activeRules = ruleRepository.getActiveRulesByType(entity.transactionType)
-                val (entityWithRules, ruleApplications) = ruleEngine.evaluateRules(entity, "", activeRules)
-                val rowId = transactionRepository.insertTransaction(entityWithRules)
-                if (rowId != -1L && ruleApplications.isNotEmpty()) {
-                    val withId = ruleApplications.map { it.copy(transactionId = rowId.toString()) }
-                    ruleRepository.saveRuleApplications(withId)
+            val result = smsTransactionProcessor.saveManualTransaction(entity)
+            if (!result.success) {
+                android.util.Log.i("ShopeePayConfirmActivity", "Not saved: ${result.reason}")
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    android.widget.Toast.makeText(
+                        applicationContext,
+                        result.reason ?: "Not saved",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("ShopeePayConfirmActivity", "Rule evaluation failed, saving without rules", e)
-                transactionRepository.insertTransaction(entity)
             }
         }
     }
