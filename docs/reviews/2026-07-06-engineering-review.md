@@ -1,13 +1,12 @@
 # Engineering Review — 2026-07-06 (Fable 5 session)
 
-> **Status (2026-07-07):** C1 (tombstone — user approved "做"), C2, C3,
-> H1–H6, M-A1, M-D1, M-D2, M5, D1–D8 and the top frontend items are ALL
-> FIXED (STATE.md batches 1–10; builds + unit suites green). **Every
-> Critical and High finding in this review is now closed.** Remaining Mediums:
-> M-R1 (screenshot path into pipeline), M-R2 (OCR parseText extraction —
-> needs the original OCR sample texts re-collected via the TNG OCR Debug
-> tool before pinning tests), M6 dual-navigation merge (do before the
-> Investment tab), paging (deferred until felt).
+> **Status (2026-07-07, final):** C1, C2, C3, H1–H6, M-A1, M-D1, M-D2, M5,
+> M-R1, M-R2, D1–D8 and the top frontend items are ALL FIXED (STATE.md
+> batches 1–11; builds + unit suites green). **Everything in this review
+> is closed except two deliberate deferrals:** M6 dual-navigation merge
+> (W4-gated; schedule it as the first step of the Investment-tab task so
+> the on-device verification happens together) and list paging (deferred
+> until the user feels lag — indices landed, which pushes that day out).
 
 > Full-codebase review against the documented architecture (docs/ +
 > docs/HARNESS/). Condensed to what future sessions need to act. Severity:
