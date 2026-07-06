@@ -62,7 +62,7 @@ fun SubscriptionTabContent(
     var showBillingCycleMenu by remember { mutableStateOf(false) }
     var showCurrencyMenu by remember { mutableStateOf(false) }
 
-    val billingCycles = listOf("Monthly", "Quarterly", "Semi-Annual", "Annual", "Weekly")
+    val billingCyclesBase = listOf("Monthly", "Quarterly", "Semi-Annual", "Annual", "Weekly")
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -104,6 +104,7 @@ fun SubscriptionTabContent(
             // incoming bank-debit SMS like today.
             val isIncome = uiState.direction ==
                 com.pennywiseai.tracker.data.database.entity.SubscriptionDirection.INCOME
+            val billingCycles = if (isIncome) billingCyclesBase + "Daily" else billingCyclesBase
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 SegmentedButton(
                     selected = !isIncome,

@@ -227,7 +227,6 @@ fun CreateRuleScreen(
                             }
                         },
                         enabled = ruleName.isNotBlank() &&
-                                 conditions.isNotEmpty() &&
                                  conditions.all { it.validate() } &&
                                  actions.isNotEmpty() &&
                                  actions.all { it.validate() }
@@ -1080,6 +1079,8 @@ private fun ActionEditor(
                     ActionType.CLEAR -> "Clear Field"
                     ActionType.ADD_TAG -> "Add Tag"
                     ActionType.REMOVE_TAG -> "Remove Tag"
+                    ActionType.GENERATE_DAILY_INCOME -> "Generate Daily Income"
+                    ActionType.EXCLUDE_FROM_ANALYTICS -> "Exclude from Analytics"
                 },
                 onValueChange = { },
                 readOnly = true,

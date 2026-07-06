@@ -9,17 +9,18 @@ class InitializeRuleTemplatesUseCase @Inject constructor(
     private val ruleRepository: RuleRepository,
     private val ruleTemplateService: RuleTemplateService
 ) {
-    suspend operator fun invoke(forceReset: Boolean = false) {
-        val existingRules = ruleRepository.getAllRules().first()
+    suspend operator fun invoke(
+        forceReset: Boolean = false,
+        deletedSystemTemplateIds: Set<String> = emptySet()
+    ) {
+        if (forceReset) {
+            ruleRepository.deleteAllRules()
+        }
 
-        if (existingRules.isEmpty() || forceReset) {
-            // Delete all existing rules when force resetting to avoid duplicates
-            if (forceReset) {
-                ruleRepository.deleteAllRules()
-            }
-
-            val templates = ruleTemplateService.getDefaultRuleTemplates()
-            templates.forEach { template ->
+        val existingIds = ruleRepository.getAllRules().first().map { it.id }.toSet()
+        val templates = ruleTemplateService.getDefaultRuleTemplates()
+        templates.forEach { template ->
+            if (template.id !in existingIds && template.id !in deletedSystemTemplateIds) {
                 ruleRepository.insertRule(template)
             }
         }

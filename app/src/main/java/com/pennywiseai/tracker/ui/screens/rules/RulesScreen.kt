@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pennywiseai.tracker.domain.model.rule.ActionType
 import com.pennywiseai.tracker.domain.usecase.BatchApplyResult
 import com.pennywiseai.tracker.domain.usecase.DryRunResult
 import com.pennywiseai.tracker.ui.components.CustomTitleTopAppBar
@@ -221,6 +222,9 @@ fun RulesScreen(
                                     onToggle = { isActive ->
                                         viewModel.toggleRule(rule.id, isActive)
                                     },
+                                    onTimeChange = { timeHHmm ->
+                                        viewModel.updateScheduleTime(rule.id, timeHHmm)
+                                    },
                                     onEdit = {
                                         onNavigateToEditRule(rule.id)
                                     },
@@ -286,10 +290,12 @@ fun RulesScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RuleCard(
     rule: com.pennywiseai.tracker.domain.model.rule.TransactionRule,
     onToggle: (Boolean) -> Unit,
+    onTimeChange: (String) -> Unit = {},
     onEdit: () -> Unit,
     onDuplicate: () -> Unit,
     onDelete: () -> Unit,
@@ -297,6 +303,15 @@ private fun RuleCard(
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showActionsMenu by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    val dailyIncomeAction = rule.actions.firstOrNull { it.actionType == ActionType.GENERATE_DAILY_INCOME }
+    val scheduledTime = dailyIncomeAction?.value?.split("|")?.getOrNull(2) ?: "09:00"
+    val timePickerState = run {
+        val h = scheduledTime.substringBefore(":").toIntOrNull() ?: 9
+        val m = scheduledTime.substringAfter(":").toIntOrNull() ?: 0
+        rememberTimePickerState(initialHour = h, initialMinute = m, is24Hour = true)
+    }
     PennyWiseCardV2(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -321,6 +336,21 @@ private fun RuleCard(
                         text = description,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Time chip for GENERATE_DAILY_INCOME rules
+                if (dailyIncomeAction != null && rule.isActive) {
+                    AssistChip(
+                        onClick = { showTimePicker = true },
+                        label = { Text("每天 $scheduledTime 记录") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Schedule,
+                                contentDescription = null,
+                                modifier = Modifier.size(Dimensions.Icon.small)
+                            )
+                        }
                     )
                 }
 
@@ -427,23 +457,20 @@ private fun RuleCard(
                                 }
                             )
 
-                            // Only show delete for custom rules
-                            if (!rule.isSystemTemplate) {
-                                DropdownMenuItem(
-                                    text = { Text("Delete Rule") },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
-                                    },
-                                    onClick = {
-                                        showActionsMenu = false
-                                        showDeleteDialog = true
-                                    }
-                                )
-                            }
+                            DropdownMenuItem(
+                                text = { Text("Delete Rule") },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                },
+                                onClick = {
+                                    showActionsMenu = false
+                                    showDeleteDialog = true
+                                }
+                            )
                         }
                     }
                 }
@@ -454,6 +481,25 @@ private fun RuleCard(
                 )
             }
         }
+    }
+
+    if (showTimePicker) {
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text("每天几点记录？") },
+            text = { TimePicker(state = timePickerState) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val hh = timePickerState.hour.toString().padStart(2, '0')
+                    val mm = timePickerState.minute.toString().padStart(2, '0')
+                    onTimeChange("$hh:$mm")
+                    showTimePicker = false
+                }) { Text("确定") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) { Text("取消") }
+            }
+        )
     }
 
     if (showDeleteDialog) {

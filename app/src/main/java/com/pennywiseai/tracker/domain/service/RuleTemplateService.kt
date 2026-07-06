@@ -10,14 +10,15 @@ class RuleTemplateService @Inject constructor() {
 
     fun getDefaultRuleTemplates(): List<TransactionRule> {
         return listOf(
-            // Just one simple example rule to get users started
-            createSmallPaymentsToFoodRule()
+            createSmallPaymentsToFoodRule(),
+            createMaeTabungBonusRule(),
+            createTngReimbursementRule()
         )
     }
 
     private fun createSmallPaymentsToFoodRule(): TransactionRule {
         return TransactionRule(
-            id = UUID.randomUUID().toString(),
+            id = "system-small-payments-food",
             name = "Small Payments to Food",
             description = "Categorize small expense payments (under 200) as Food & Dining",
             priority = 100,
@@ -43,6 +44,57 @@ class RuleTemplateService @Inject constructor() {
                 )
             ),
             isActive = false, // Users can enable this
+            isSystemTemplate = true
+        )
+    }
+
+    private fun createMaeTabungBonusRule(): TransactionRule {
+        return TransactionRule(
+            id = "system-mae-tabung-bonus",
+            name = "MAE Holiday Tabung Bonus",
+            description = "Auto-record RM1.00/day Maybank income from MAE Tabung promotion. Toggle ON to start, OFF to stop.",
+            priority = 10,
+            conditions = emptyList(),
+            actions = listOf(
+                RuleAction(
+                    field = TransactionField.MERCHANT,
+                    actionType = ActionType.GENERATE_DAILY_INCOME,
+                    value = "Maybank Tabung Bonus|1.00|09:00"
+                )
+            ),
+            isActive = false,
+            isSystemTemplate = true
+        )
+    }
+
+    private fun createTngReimbursementRule(): TransactionRule {
+        return TransactionRule(
+            id = "system-tng-reimbursement",
+            name = "TNG Reimbursement Exclude",
+            description = "TNG eWallet income (friends paying back) excluded from analytics. Enable if you never receive real income via TNG.",
+            priority = 5,
+            conditions = listOf(
+                RuleCondition(
+                    field = TransactionField.TYPE,
+                    operator = ConditionOperator.EQUALS,
+                    value = "INCOME",
+                    logicalOperator = LogicalOperator.AND
+                ),
+                RuleCondition(
+                    field = TransactionField.BANK_NAME,
+                    operator = ConditionOperator.CONTAINS,
+                    value = "TNG",
+                    logicalOperator = LogicalOperator.AND
+                )
+            ),
+            actions = listOf(
+                RuleAction(
+                    field = TransactionField.MERCHANT,
+                    actionType = ActionType.EXCLUDE_FROM_ANALYTICS,
+                    value = ""
+                )
+            ),
+            isActive = false,
             isSystemTemplate = true
         )
     }

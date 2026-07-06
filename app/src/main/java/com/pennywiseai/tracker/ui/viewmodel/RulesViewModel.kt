@@ -1,12 +1,22 @@
-package com.pennywiseai.tracker.ui.viewmodel
+﻿package com.pennywiseai.tracker.ui.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.pennywiseai.tracker.billing.EntitlementGate
 import com.pennywiseai.tracker.billing.FreeTierLimits
 import com.pennywiseai.tracker.data.repository.AccountBalanceRepository
+import com.pennywiseai.tracker.data.repository.SubscriptionRepository
+import com.pennywiseai.tracker.domain.model.rule.ActionType
+import com.pennywiseai.tracker.domain.model.rule.RuleAction
 import com.pennywiseai.tracker.domain.model.rule.TransactionRule
+import com.pennywiseai.tracker.worker.DailyIncomeWorker
+import java.time.LocalTime
+import java.time.ZonedDateTime
+import java.util.concurrent.TimeUnit
 import com.pennywiseai.tracker.domain.repository.RuleRepository
 import com.pennywiseai.tracker.domain.service.RuleTemplateService
 import com.pennywiseai.tracker.domain.usecase.ApplyRulesToPastTransactionsUseCase
@@ -27,6 +37,7 @@ class RulesViewModel @Inject constructor(
     private val initializeRuleTemplatesUseCase: InitializeRuleTemplatesUseCase,
     private val applyRulesToPastTransactionsUseCase: ApplyRulesToPastTransactionsUseCase,
     private val accountBalanceRepository: AccountBalanceRepository,
+    private val subscriptionRepository: SubscriptionRepository,
     entitlementGate: EntitlementGate,
 ) : ViewModel() {
 
@@ -107,11 +118,10 @@ class RulesViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // Initialize default rule templates if none exist
-                initializeRuleTemplatesUseCase()
+                val deletedIds = sharedPrefs.getStringSet("deleted_system_templates", emptySet()) ?: emptySet()
+                initializeRuleTemplatesUseCase(deletedSystemTemplateIds = deletedIds)
             } catch (e: Exception) {
-                // Log error but don't crash
-                e.printStackTrace()
+                android.util.Log.e("RulesViewModel", "operation failed", e)
             } finally {
                 _isLoading.value = false
             }
@@ -122,11 +132,72 @@ class RulesViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 ruleRepository.setRuleActive(ruleId, isActive)
+                val rule = ruleRepository.getRuleById(ruleId) ?: return@launch
+                rule.actions
+                    .filter { it.actionType == ActionType.GENERATE_DAILY_INCOME }
+                    .forEach { action ->
+                        val parts = action.value.split("|")
+                        val merchant = parts.getOrNull(0) ?: return@forEach
+                        val amount = parts.getOrNull(1)?.toBigDecimalOrNull() ?: return@forEach
+                        val timeHHmm = parts.getOrNull(2) ?: "09:00"
+                        if (isActive) {
+                            subscriptionRepository.createDailyIncomeSubscription(merchant, amount, ruleId)
+                            scheduleDailyIncomeWork(ruleId, timeHHmm)
+                        } else {
+                            subscriptionRepository.endSubscriptionByRuleId(ruleId)
+                            cancelDailyIncomeWork(ruleId)
+                        }
+                    }
             } catch (e: Exception) {
-                // Log error
-                e.printStackTrace()
+                android.util.Log.e("RulesViewModel", "operation failed", e)
             }
         }
+    }
+
+    fun updateScheduleTime(ruleId: String, timeHHmm: String) {
+        viewModelScope.launch {
+            try {
+                val rule = ruleRepository.getRuleById(ruleId) ?: return@launch
+                val updatedActions = rule.actions.map { action ->
+                    if (action.actionType == ActionType.GENERATE_DAILY_INCOME) {
+                        val parts = action.value.split("|")
+                        val merchant = parts.getOrNull(0) ?: return@map action
+                        val amount = parts.getOrNull(1) ?: return@map action
+                        action.copy(value = "$merchant|$amount|$timeHHmm")
+                    } else action
+                }
+                ruleRepository.updateRule(rule.copy(actions = updatedActions))
+                if (rule.isActive) {
+                    scheduleDailyIncomeWork(ruleId, timeHHmm)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("RulesViewModel", "operation failed", e)
+            }
+        }
+    }
+
+    private fun scheduleDailyIncomeWork(ruleId: String, timeHHmm: String) {
+        val workName = "${DailyIncomeWorker.WORK_NAME_PREFIX}$ruleId"
+        val target = LocalTime.parse(timeHHmm)
+        val now = ZonedDateTime.now()
+        var next = now.withHour(target.hour).withMinute(target.minute).withSecond(0).withNano(0)
+        if (!next.isAfter(now)) next = next.plusDays(1)
+        val initialDelay = next.toInstant().toEpochMilli() - now.toInstant().toEpochMilli()
+
+        val request = PeriodicWorkRequestBuilder<DailyIncomeWorker>(1, TimeUnit.DAYS)
+            .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+            .addTag(workName)
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            workName,
+            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
+            request
+        )
+    }
+
+    private fun cancelDailyIncomeWork(ruleId: String) {
+        WorkManager.getInstance(context).cancelUniqueWork("${DailyIncomeWorker.WORK_NAME_PREFIX}$ruleId")
     }
 
     fun createRule(rule: TransactionRule) {
@@ -134,7 +205,7 @@ class RulesViewModel @Inject constructor(
             try {
                 ruleRepository.insertRule(rule)
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("RulesViewModel", "operation failed", e)
             }
         }
     }
@@ -142,9 +213,22 @@ class RulesViewModel @Inject constructor(
     fun deleteRule(ruleId: String) {
         viewModelScope.launch {
             try {
+                val rule = ruleRepository.getRuleById(ruleId)
+                if (rule?.isSystemTemplate == true) {
+                    val deleted = sharedPrefs.getStringSet("deleted_system_templates", emptySet())!!.toMutableSet()
+                    deleted.add(ruleId)
+                    sharedPrefs.edit().putStringSet("deleted_system_templates", deleted).apply()
+                }
+                // Deleting a daily-income rule must also stop its worker and end its
+                // subscription — otherwise phantom income keeps generating with no
+                // visible rule left to turn off.
+                if (rule?.actions?.any { it.actionType == ActionType.GENERATE_DAILY_INCOME } == true) {
+                    subscriptionRepository.endSubscriptionByRuleId(ruleId)
+                    cancelDailyIncomeWork(ruleId)
+                }
                 ruleRepository.deleteRule(ruleId)
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("RulesViewModel", "operation failed", e)
             }
         }
     }
@@ -154,7 +238,7 @@ class RulesViewModel @Inject constructor(
             try {
                 ruleRepository.updateRule(rule)
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("RulesViewModel", "operation failed", e)
             }
         }
     }
@@ -167,10 +251,10 @@ class RulesViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // Force reset to default templates
+                sharedPrefs.edit().remove("deleted_system_templates").apply()
                 initializeRuleTemplatesUseCase(forceReset = true)
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("RulesViewModel", "operation failed", e)
             } finally {
                 _isLoading.value = false
             }
@@ -204,7 +288,7 @@ class RulesViewModel @Inject constructor(
                 }
                 _batchApplyResult.value = result
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("RulesViewModel", "operation failed", e)
                 _batchApplyResult.value = BatchApplyResult(
                     totalProcessed = 0,
                     totalUpdated = 0,
@@ -231,7 +315,7 @@ class RulesViewModel @Inject constructor(
                 )
                 _batchApplyResult.value = result
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("RulesViewModel", "operation failed", e)
                 _batchApplyResult.value = BatchApplyResult(
                     totalProcessed = 0,
                     totalUpdated = 0,
@@ -256,7 +340,7 @@ class RulesViewModel @Inject constructor(
             try {
                 _dryRunResult.value = applyRulesToPastTransactionsUseCase.previewRuleApplication(rule)
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("RulesViewModel", "operation failed", e)
             } finally {
                 _isLoading.value = false
             }

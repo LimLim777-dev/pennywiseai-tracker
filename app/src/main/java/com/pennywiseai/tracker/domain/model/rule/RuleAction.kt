@@ -15,18 +15,22 @@ data class RuleAction(
             ActionType.CLEAR -> true
             ActionType.ADD_TAG -> value.isNotBlank()
             ActionType.REMOVE_TAG -> value.isNotBlank()
-            ActionType.BLOCK -> true  // BLOCK action doesn't need a value
+            ActionType.BLOCK -> true
+            ActionType.GENERATE_DAILY_INCOME -> value.isNotBlank()
+            ActionType.EXCLUDE_FROM_ANALYTICS -> true
         }
     }
 }
 
 @Serializable
 enum class ActionType {
-    SET,           // Set field to value
-    APPEND,        // Append value to field
-    PREPEND,       // Prepend value to field
-    CLEAR,         // Clear field
-    ADD_TAG,       // Add a tag
-    REMOVE_TAG,    // Remove a tag
-    BLOCK          // Block the transaction from being saved
+    SET,
+    APPEND,
+    PREPEND,
+    CLEAR,
+    ADD_TAG,
+    REMOVE_TAG,
+    BLOCK,
+    GENERATE_DAILY_INCOME,  // value = "merchantName|amount"; creates a Daily INCOME subscription when rule is toggled ON
+    EXCLUDE_FROM_ANALYTICS  // marks transaction as excluded from income/expense analytics
 }

@@ -132,6 +132,7 @@ class SubscriptionRepository @Inject constructor(
     fun advance(date: LocalDate, billingCycle: String, reverse: Boolean = false): LocalDate {
         val sign = if (reverse) -1L else 1L
         return when (billingCycle.uppercase()) {
+            "DAILY" -> date.plusDays(sign)
             "WEEKLY" -> date.plusWeeks(sign)
             "MONTHLY" -> date.plusMonths(sign)
             "QUARTERLY" -> date.plusMonths(3L * sign)
@@ -289,6 +290,45 @@ class SubscriptionRepository @Inject constructor(
         }
 
         return subscriptionDao.insertSubscription(subscription)
+    }
+
+    /**
+     * Creates an ACTIVE Daily INCOME subscription for a Smart Rule's GENERATE_DAILY_INCOME action.
+     * Uses the rule's fixed ID as the UMN so it can be found later to end it.
+     */
+    suspend fun createDailyIncomeSubscription(
+        merchantName: String,
+        amount: BigDecimal,
+        ruleId: String
+    ): Long {
+        val existing = subscriptionDao.getSubscriptionByUmn("rule:$ruleId")
+        if (existing != null) {
+            if (existing.state != SubscriptionState.ACTIVE) {
+                subscriptionDao.updateSubscriptionState(existing.id, SubscriptionState.ACTIVE)
+            }
+            return existing.id
+        }
+        val subscription = SubscriptionEntity(
+            merchantName = merchantName,
+            amount = amount,
+            nextPaymentDate = LocalDate.now(),
+            state = SubscriptionState.ACTIVE,
+            bankName = "Maybank2u",
+            umn = "rule:$ruleId",
+            direction = com.pennywiseai.tracker.data.database.entity.SubscriptionDirection.INCOME,
+            billingCycle = "Daily",
+            currency = "MYR",
+            category = "Income"
+        )
+        return subscriptionDao.insertSubscription(subscription)
+    }
+
+    /**
+     * Ends the Daily INCOME subscription linked to a Smart Rule.
+     */
+    suspend fun endSubscriptionByRuleId(ruleId: String) {
+        val existing = subscriptionDao.getSubscriptionByUmn("rule:$ruleId") ?: return
+        subscriptionDao.updateSubscriptionState(existing.id, SubscriptionState.ENDED)
     }
 
     private fun determineCategory(merchantName: String): String {

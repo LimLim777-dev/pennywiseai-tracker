@@ -14,7 +14,8 @@ class MaybankMAEParser : BankParser() {
     override fun isTransactionMessage(message: String): Boolean {
         val lower = message.lowercase()
         return lower.contains("transferred") ||
-            lower.contains("tabung daily cash bonus") ||
+            lower.contains("duitnow autodebit") ||
+            (lower.contains("has charged") && lower.contains("duitnow")) ||
             (lower.contains("successful payment of") && lower.contains("fpx"))
     }
 
@@ -33,7 +34,8 @@ class MaybankMAEParser : BankParser() {
                 if (SelfTransferDetector.isOwnerName(recipient)) TransactionType.TRANSFER
                 else TransactionType.EXPENSE
             }
-            lower.contains("tabung daily cash bonus") -> TransactionType.INCOME
+            lower.contains("duitnow autodebit") || (lower.contains("has charged") && lower.contains("duitnow")) ->
+                TransactionType.EXPENSE
             lower.contains("successful payment of") -> TransactionType.EXPENSE
             else -> null
         }
@@ -45,13 +47,18 @@ class MaybankMAEParser : BankParser() {
             lower.contains("transferred") -> RECIPIENT_REGEX.find(message)
                 ?.groupValues?.get(1)?.trim()?.let { cleanMerchantName(it) }
                 ?.takeIf { isValidMerchantName(it) }
-            lower.contains("tabung daily cash bonus") -> "Maybank Tabung Bonus"
+            lower.contains("duitnow autodebit") || (lower.contains("has charged") && lower.contains("duitnow")) ->
+                DUITNOW_MERCHANT_REGEX.find(message)?.groupValues?.get(1)?.trim()
+                    ?.let { cleanMerchantName(it) }?.takeIf { isValidMerchantName(it) }
             lower.contains("successful payment of") -> FPX_MERCHANT_REGEX.find(message)
                 ?.groupValues?.get(1)?.trim()?.let { cleanMerchantName(it) }
                 ?.takeIf { isValidMerchantName(it) }
             else -> null
         }
     }
+
+    override fun extractAccountLast4(message: String): String? =
+        MASKED_ACCOUNT_REGEX.find(message)?.groupValues?.get(1)
 
     override fun extractReference(message: String): String? {
         REF_REGEX.find(message)?.let { return it.groupValues[1] }
@@ -73,5 +80,7 @@ class MaybankMAEParser : BankParser() {
         )
         private val REF_REGEX = Regex("""REF:?\s*([A-Za-z0-9]+)""", RegexOption.IGNORE_CASE)
         private val FPX_ID_REGEX = Regex("""FPX ID:?\s*([A-Za-z0-9]+)""", RegexOption.IGNORE_CASE)
+        private val DUITNOW_MERCHANT_REGEX = Regex("""^(.+?)\s+has charged""", RegexOption.IGNORE_CASE)
+        private val MASKED_ACCOUNT_REGEX = Regex("""\*{2,3}(\d{4})""")
     }
 }
