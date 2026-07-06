@@ -70,6 +70,71 @@ class RuleEngineTest {
         assertNull(result.bankName)
     }
 
+    // --- REGEX_MATCHES robustness: a malformed user pattern must never throw,
+    // because an exception here propagates to the ingestion pipeline's
+    // catch-all and silently drops every future matching-type transaction. ---
+
+    private fun regexRule(pattern: String, category: String) = TransactionRule(
+        name = "regex-$category",
+        conditions = listOf(
+            RuleCondition(TransactionField.MERCHANT, ConditionOperator.REGEX_MATCHES, pattern)
+        ),
+        actions = listOf(RuleAction(TransactionField.CATEGORY, ActionType.SET, category))
+    )
+
+    @Test
+    fun `malformed regex condition does not throw and does not match`() {
+        val (result, applications) = engine.evaluateRules(
+            txn(),
+            smsText = null,
+            rules = listOf(regexRule("RM(", "Broken"))
+        )
+
+        assertEquals("Food", result.category)
+        assertTrue(applications.isEmpty())
+    }
+
+    @Test
+    fun `malformed regex rule does not block other rules from applying`() {
+        val (result, applications) = engine.evaluateRules(
+            txn(),
+            smsText = null,
+            rules = listOf(
+                regexRule("[invalid", "Broken"),
+                regexRule(".*Coffee.*", "Dining")
+            )
+        )
+
+        assertEquals("Dining", result.category)
+        assertEquals(1, applications.size)
+    }
+
+    @Test
+    fun `valid regex condition still matches`() {
+        val (result, _) = engine.evaluateRules(
+            txn(),
+            smsText = null,
+            rules = listOf(regexRule("^Coffee.*", "Dining"))
+        )
+
+        assertEquals("Dining", result.category)
+    }
+
+    // EXCLUDE_FROM_ANALYTICS must apply regardless of which field the action
+    // row carries (system templates store field=MERCHANT) — regression for the
+    // fix where field-specific branches swallowed the action.
+    @Test
+    fun `EXCLUDE_FROM_ANALYTICS applies when action field is MERCHANT`() {
+        val (result, applications) = engine.evaluateRules(
+            txn(),
+            smsText = null,
+            rules = listOf(rule(RuleAction(TransactionField.MERCHANT, ActionType.EXCLUDE_FROM_ANALYTICS, "")))
+        )
+
+        assertTrue(result.excludedFromAnalytics)
+        assertTrue(applications.isNotEmpty())
+    }
+
     // --- Incoming: ACCOUNT condition tests (EQUALS, CONTAINS, etc.) ---
 
     @Test

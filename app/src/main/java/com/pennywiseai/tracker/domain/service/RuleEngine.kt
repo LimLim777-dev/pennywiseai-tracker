@@ -169,7 +169,12 @@ class RuleEngine @Inject constructor() {
                 .any { fieldValue.equals(it, ignoreCase = true) }
             ConditionOperator.NOT_IN -> !condition.value.split(",").map { it.trim() }
                 .any { fieldValue.equals(it, ignoreCase = true) }
-            ConditionOperator.REGEX_MATCHES -> fieldValue.matches(Regex(condition.value))
+            // A malformed user-entered pattern must never throw — an exception here
+            // propagates to the ingestion pipeline's catch-all and silently drops
+            // every future transaction that reaches this rule.
+            ConditionOperator.REGEX_MATCHES ->
+                runCatching { Regex(condition.value) }.getOrNull()
+                    ?.let { fieldValue.matches(it) } ?: false
             ConditionOperator.IS_EMPTY -> fieldValue.isBlank()
             ConditionOperator.IS_NOT_EMPTY -> fieldValue.isNotBlank()
         }
@@ -254,6 +259,9 @@ class RuleEngine @Inject constructor() {
         transaction: TransactionEntity,
         action: RuleAction
     ): Pair<TransactionEntity, String> {
+        if (action.actionType == ActionType.EXCLUDE_FROM_ANALYTICS) {
+            return transaction.copy(excludedFromAnalytics = true) to "excluded"
+        }
         return when (action.field) {
             TransactionField.CATEGORY -> {
                 val newValue = when (action.actionType) {
@@ -306,7 +314,11 @@ class RuleEngine @Inject constructor() {
                 }
                 transaction.copy(bankName = newValue.takeIf { it.isNotBlank() }) to newValue
             }
-            else -> transaction to getFieldValue(transaction, null, action.field)
+            else -> when (action.actionType) {
+                ActionType.EXCLUDE_FROM_ANALYTICS ->
+                    transaction.copy(excludedFromAnalytics = true) to "excluded"
+                else -> transaction to getFieldValue(transaction, null, action.field)
+            }
         }
     }
 

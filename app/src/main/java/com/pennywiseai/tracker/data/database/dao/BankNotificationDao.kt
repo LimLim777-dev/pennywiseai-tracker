@@ -30,6 +30,11 @@ interface BankNotificationDao {
     @Query("DELETE FROM bank_notifications")
     suspend fun deleteAllNotifications()
 
+    /** Keep only processed rows younger than [cutoff]; unprocessed rows are
+     *  kept regardless of age — they may still be needed for diagnosis. */
+    @Query("DELETE FROM bank_notifications WHERE posted_at < :cutoff AND processed = 1")
+    suspend fun deleteProcessedOlderThan(cutoff: java.time.LocalDateTime)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrReplace(notification: BankNotificationEntity): Long
 }

@@ -57,7 +57,7 @@ import com.pennywiseai.tracker.data.database.entity.UnrecognizedSmsEntity
  * that needs to record the version it was exported against. Bump this in lock-
  * step with any schema change.
  */
-const val SCHEMA_VERSION = 54
+const val SCHEMA_VERSION = 56
 
 /**
  * The PennyWise Room database.
@@ -113,9 +113,11 @@ const val SCHEMA_VERSION = 54
         AutoMigration(from = 40, to = 41),
         AutoMigration(from = 41, to = 42),
         AutoMigration(from = 42, to = 43),
-        AutoMigration(from = 43, to = 44, spec = Migration43To44::class)
+        AutoMigration(from = 43, to = 44, spec = Migration43To44::class),
         // 44→45, 45→46 and 46→47 are manual migrations registered in DatabaseModule
         // (profile_id columns and loan_contribution column).
+        // 55→56: adds three query indices on transactions (additive, no data change).
+        AutoMigration(from = 55, to = 56)
     ]
 )
 @TypeConverters(Converters::class)
@@ -529,6 +531,12 @@ abstract class PennyWiseDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_54_55 = object : Migration(54, 55) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `transactions` ADD COLUMN `personal_amount` TEXT DEFAULT NULL")
+            }
+        }
+
         val MIGRATION_38_39 = object : Migration(38, 39) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Add receipt_path to transactions if missing
@@ -583,6 +591,7 @@ abstract class PennyWiseDatabase : RoomDatabase() {
             MIGRATION_51_52,
             MIGRATION_52_53,
             MIGRATION_53_54,
+            MIGRATION_54_55,
         )
     }
     

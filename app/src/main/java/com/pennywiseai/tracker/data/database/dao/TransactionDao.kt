@@ -93,18 +93,6 @@ interface TransactionDao {
     @Query("SELECT DISTINCT merchant_name FROM transactions WHERE is_deleted = 0 ORDER BY merchant_name ASC")
     fun getAllMerchants(): Flow<List<String>>
     
-    @Query("""
-        SELECT SUM(amount) FROM transactions 
-        WHERE is_deleted = 0 
-        AND transaction_type = :type 
-        AND date_time BETWEEN :startDate AND :endDate
-    """)
-    suspend fun getTotalAmountByTypeAndPeriod(
-        type: TransactionType,
-        startDate: LocalDateTime,
-        endDate: LocalDateTime
-    ): Double?
-    
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransaction(transaction: TransactionEntity): Long
     
@@ -135,7 +123,7 @@ interface TransactionDao {
     @Query("DELETE FROM transactions WHERE loan_id IS NULL AND group_id IS NULL")
     suspend fun deleteUncuratedTransactions()
     
-    @Query("UPDATE transactions SET category = :newCategory WHERE merchant_name = :merchantName")
+    @Query("UPDATE transactions SET category = :newCategory WHERE merchant_name = :merchantName AND is_deleted = 0")
     suspend fun updateCategoryForMerchant(merchantName: String, newCategory: String)
 
     @Query("UPDATE transactions SET category = :category, updated_at = :updatedAt WHERE id = :transactionId")
@@ -370,10 +358,18 @@ interface TransactionDao {
     """)
     suspend fun findPotentialDuplicatesByReference(): List<TransactionEntity>
 
+    /**
+     * Amounts are stored as BigDecimal TEXT whose scale varies by source
+     * ("250" vs "250.00"), so TEXT equality silently misses equal amounts.
+     * CAST + epsilon matches [findRecentExpensesByMerchantAndAmount] — this
+     * query backs the cross-channel (SMS vs notification) dedup window and
+     * the Boost self-transfer reclassification, both scale-sensitive.
+     */
     @Query("""
         SELECT * FROM transactions
         WHERE is_deleted = 0
-        AND amount = :amount
+        AND CAST(amount AS REAL) BETWEEN CAST(:amount AS REAL) - 0.01
+                                     AND CAST(:amount AS REAL) + 0.01
         AND date_time BETWEEN :dateStart AND :dateEnd
     """)
     suspend fun getTransactionByAmountAndDate(

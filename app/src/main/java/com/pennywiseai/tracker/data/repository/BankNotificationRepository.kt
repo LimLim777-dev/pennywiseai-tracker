@@ -38,6 +38,10 @@ class BankNotificationRepository @Inject constructor(
             postedAt = postedAt
         )
 
+        // Opportunistic retention: notification bodies are sensitive and only
+        // useful for diagnosis/sample collection — keep processed ones 30 days.
+        runCatching { dao.deleteProcessedOlderThan(LocalDateTime.now().minusDays(30)) }
+
         return dao.insert(entity)
     }
 

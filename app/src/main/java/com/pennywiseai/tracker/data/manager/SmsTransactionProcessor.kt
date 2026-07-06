@@ -2,8 +2,10 @@ package com.pennywiseai.tracker.data.manager
 
 import android.content.Context
 import android.util.Log
+import androidx.room.withTransaction
 import com.pennywiseai.parser.core.ParsedTransaction
 import com.pennywiseai.parser.core.bank.BankParserFactory
+import com.pennywiseai.tracker.data.database.PennyWiseDatabase
 import com.pennywiseai.tracker.data.database.entity.AccountBalanceEntity
 import com.pennywiseai.tracker.data.database.entity.ProfileEntity
 import com.pennywiseai.tracker.data.database.entity.CardType
@@ -33,6 +35,7 @@ import javax.inject.Singleton
 @Singleton
 class SmsTransactionProcessor @Inject constructor(
     @ApplicationContext private val appContext: Context,
+    private val database: PennyWiseDatabase,
     private val transactionRepository: TransactionRepository,
     private val accountBalanceRepository: AccountBalanceRepository,
     private val cardRepository: CardRepository,
@@ -159,34 +162,57 @@ class SmsTransactionProcessor @Inject constructor(
                 Log.d(TAG, "Applied ${ruleApplications.size} rules to transaction")
             }
 
-            // Check if this transaction matches an active subscription
-            val matchedSubscription = subscriptionRepository.matchTransactionToSubscription(
-                entityWithRules.merchantName,
-                entityWithRules.amount
-            )
+            // Check if this transaction matches an active subscription. Only outgoing
+            // money can pay a subscription — an INCOME with a matching merchant/amount
+            // (e.g. a refund from the same service) must not advance the payment date.
+            // Match here (read-only, sets the isRecurring flag); the date ADVANCE
+            // happens only after the insert is confirmed below, so a duplicate or
+            // losing concurrent channel can never advance the subscription.
+            val matchedSubscription = if (
+                entityWithRules.transactionType == TransactionType.EXPENSE ||
+                entityWithRules.transactionType == TransactionType.CREDIT
+            ) {
+                subscriptionRepository.matchTransactionToSubscription(
+                    entityWithRules.merchantName,
+                    entityWithRules.amount
+                )
+            } else null
 
             val finalEntity = if (matchedSubscription != null) {
                 Log.d(TAG, "Transaction matched to active subscription: ${matchedSubscription.merchantName}")
-                subscriptionRepository.updateNextPaymentDateAfterCharge(
-                    matchedSubscription.id,
-                    entityWithRules.dateTime.toLocalDate()
-                )
                 entityWithRules.copy(isRecurring = true)
             } else {
                 entityWithRules
             }
 
-            val rowId = transactionRepository.insertTransaction(finalEntity)
+            // Consistency-critical trio — insert, its rule audit trail, and the
+            // subscription advance — commit or roll back together.
+            val rowId = database.withTransaction {
+                val id = transactionRepository.insertTransaction(finalEntity)
+                if (id != -1L) {
+                    if (ruleApplications.isNotEmpty()) {
+                        ruleRepository.saveRuleApplications(ruleApplications)
+                    }
+                    if (matchedSubscription != null) {
+                        subscriptionRepository.updateNextPaymentDateAfterCharge(
+                            matchedSubscription.id,
+                            finalEntity.dateTime.toLocalDate()
+                        )
+                    }
+                }
+                id
+            }
+
             if (rowId != -1L) {
                 Log.d(TAG, "Saved new transaction with ID: $rowId${if (finalEntity.isRecurring) " (Recurring)" else ""}")
 
-                // Save rule applications if any rules were applied
-                if (ruleApplications.isNotEmpty()) {
-                    ruleRepository.saveRuleApplications(ruleApplications)
+                // Balance updates stay OUTSIDE the transaction on purpose: a bug in
+                // balance math must not roll back (or block) the transaction itself.
+                try {
+                    processBalanceUpdate(parsedTransaction, finalEntity, rowId)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Balance update failed for tx $rowId (transaction kept)", e)
                 }
-
-                // Process balance updates
-                processBalanceUpdate(parsedTransaction, finalEntity, rowId)
 
                 // Trigger widget refresh for recent transactions
                 com.pennywiseai.tracker.widget.RecentTransactionsWidgetUpdateWorker.enqueueOneShot(appContext)

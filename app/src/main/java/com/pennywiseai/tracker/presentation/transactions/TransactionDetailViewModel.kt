@@ -22,6 +22,8 @@ import com.pennywiseai.tracker.data.repository.LoanRepository
 import com.pennywiseai.tracker.data.repository.MerchantMappingRepository
 import com.pennywiseai.tracker.data.repository.TransactionGroupRepository
 import com.pennywiseai.tracker.data.repository.TransactionRepository
+import com.pennywiseai.tracker.data.repository.SubscriptionRepository
+import com.pennywiseai.tracker.domain.usecase.GenerateIncomeAutopayUseCase
 import com.pennywiseai.tracker.data.database.entity.TransactionGroupEntity
 import com.pennywiseai.tracker.core.Constants
 import com.pennywiseai.tracker.utils.SmsReportUrlBuilder
@@ -46,6 +48,8 @@ class TransactionDetailViewModel @Inject constructor(
     private val currencyConversionService: CurrencyConversionService,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val receiptManager: ReceiptManager,
+    private val subscriptionRepository: SubscriptionRepository,
+    private val generateIncomeAutopayUseCase: GenerateIncomeAutopayUseCase,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
     
@@ -415,12 +419,16 @@ class TransactionDetailViewModel @Inject constructor(
         }
     }
     
+    fun updatePersonalAmount(value: String) {
+        _editableTransaction.update { it?.copy(personalAmount = value.toBigDecimalOrNull()) }
+    }
+
     fun updateDescription(description: String?) {
         _editableTransaction.update { current ->
             current?.copy(description = if (description.isNullOrEmpty()) null else description)
         }
     }
-    
+
     fun updateRecurringStatus(isRecurring: Boolean) {
         _editableTransaction.update { current ->
             current?.copy(isRecurring = isRecurring)
@@ -430,6 +438,15 @@ class TransactionDetailViewModel @Inject constructor(
     fun updateAccountNumber(accountNumber: String?) {
         _editableTransaction.update { current ->
             current?.copy(accountNumber = if (accountNumber.isNullOrEmpty()) null else accountNumber)
+        }
+    }
+
+    fun updateAccountAndBank(accountLast4: String?, bankName: String?) {
+        _editableTransaction.update { current ->
+            current?.copy(
+                accountNumber = if (accountLast4.isNullOrEmpty()) null else accountLast4,
+                bankName = if (bankName.isNullOrEmpty()) current.bankName else bankName
+            )
         }
     }
 
@@ -841,6 +858,20 @@ class TransactionDetailViewModel @Inject constructor(
                         accountBalanceRepository.ensureManualOpening(bank, acct)
                     }
                     transactionRepository.deleteTransaction(txn)
+                    // If deleting an auto-generated daily income, rewind the subscription's
+                    // nextPaymentDate and regenerate. Must run AFTER the delete: the soft
+                    // delete frees the idempotency hash — run before it, the regeneration
+                    // dedups against the not-yet-deleted row and same-day income is lost.
+                    txn.transactionHash.takeIf { it.startsWith("autopay-") }?.let { hash ->
+                        val parts = hash.removePrefix("autopay-").split("-")
+                        parts.firstOrNull()?.toLongOrNull()?.let { subId ->
+                            subscriptionRepository.updateNextPaymentDate(
+                                subId,
+                                java.time.LocalDate.now()
+                            )
+                            generateIncomeAutopayUseCase.execute()
+                        }
+                    }
                     if (bank != null && acct != null) {
                         accountBalanceRepository.recomputeManualBalance(bank, acct)
                     }

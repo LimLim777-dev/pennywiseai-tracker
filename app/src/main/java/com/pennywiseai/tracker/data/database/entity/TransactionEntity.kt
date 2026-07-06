@@ -11,7 +11,15 @@ import kotlinx.serialization.Serializable
 
 @Entity(
     tableName = "transactions",
-    indices = [Index(value = ["transaction_hash"], unique = true)]
+    indices = [
+        Index(value = ["transaction_hash"], unique = true),
+        // Nearly every list/analytics query filters is_deleted and
+        // sorts/ranges on date_time; account screens filter by bank+account.
+        // Without these, each Room Flow re-emission full-scans the table.
+        Index(value = ["is_deleted", "date_time"]),
+        Index(value = ["date_time"]),
+        Index(value = ["bank_name", "account_number"])
+    ]
 )
 @Serializable
 data class TransactionEntity(
@@ -115,7 +123,11 @@ data class TransactionEntity(
     val groupId: Long? = null,
 
     @ColumnInfo(name = "profile_id", defaultValue = "NULL")
-    val profileId: Long? = null
+    val profileId: Long? = null,
+
+    @ColumnInfo(name = "personal_amount", defaultValue = "NULL")
+    @Contextual
+    val personalAmount: BigDecimal? = null
 )
 
 @Serializable
