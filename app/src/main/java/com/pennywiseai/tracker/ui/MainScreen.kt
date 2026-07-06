@@ -453,6 +453,11 @@ fun MainScreen(
                                 navController.navigate("notification_log") {
                                     launchSingleTop = true
                                 }
+                            },
+                            onNavigateToUobCashback = {
+                                navController.navigate("uob_cashback") {
+                                    launchSingleTop = true
+                                }
                             }
                         )
                     }
@@ -462,6 +467,17 @@ fun MainScreen(
                     route = "notification_log",
                     content = { _: NavBackStackEntry ->
                         com.pennywiseai.tracker.ui.screens.notificationlog.NotificationLogScreen(
+                            onNavigateBack = {
+                                navController.safePopBackStack()
+                            }
+                        )
+                    }
+                )
+
+                composable(
+                    route = "uob_cashback",
+                    content = { _: NavBackStackEntry ->
+                        com.pennywiseai.tracker.ui.screens.uob.UobCashbackScreen(
                             onNavigateBack = {
                                 navController.safePopBackStack()
                             }

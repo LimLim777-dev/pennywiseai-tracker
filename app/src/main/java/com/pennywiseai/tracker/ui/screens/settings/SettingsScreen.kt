@@ -90,6 +90,7 @@ fun SettingsScreen(
     onNavigateToAppearance: () -> Unit = {},
     onNavigateToImportStatement: () -> Unit = {},
     onNavigateToNotificationLog: () -> Unit = {},
+    onNavigateToUobCashback: () -> Unit = {},
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     appLockViewModel: com.pennywiseai.tracker.ui.viewmodel.AppLockViewModel = hiltViewModel(),
     permissionViewModel: com.pennywiseai.tracker.ui.viewmodel.PermissionViewModel = hiltViewModel()
@@ -535,6 +536,15 @@ fun SettingsScreen(
                     title = "Notification Log",
                     subtitle = "View received bank notifications and parse status",
                     onClick = onNavigateToNotificationLog,
+                    position = ItemPosition.MIDDLE
+                )
+                SettingsNavItem(
+                    icon = Icons.Default.CreditCard,
+                    iconBgColor = blue_light,
+                    iconTint = blue_dark,
+                    title = "UOB One Cashback",
+                    subtitle = "Cycle spend, tier progress & rebate estimate",
+                    onClick = onNavigateToUobCashback,
                     position = ItemPosition.MIDDLE
                 )
                 SettingsNavItem(

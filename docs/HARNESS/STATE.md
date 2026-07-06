@@ -67,7 +67,19 @@ building new pipeline-dependent features.
   + retention; merge dual navigation BEFORE building the Investment tab.
   On-device check for (8): pick a TNG screenshot → edit the amount in the
   dialog → saved transaction shows the edited amount.
-- **Fifth batch DONE 2026-07-06** (Fable 5, last): (14) doc-drift cleanup —
+- **Sixth batch DONE 2026-07-07** (Fable 5, refreshed window): (16)
+  **UOB T-C3 screen landed** — Settings → "UOB One Cashback":
+  `ui/screens/uob/UobCashbackScreen.kt` + ViewModel feed captured UOB
+  transactions (bankName "UOB", CREDIT/EXPENSE) through UobCategoryMapper
+  into the engine for the CURRENT cycle; shows RM800 progress, days left,
+  per-category rebate with capped/sweet-spot hints, uncertain-boundary
+  bucket, estimated total, captured-only disclaimer. Registered in BOTH
+  navigation systems (typed UobCashback + string "uob_cashback").
+  On-device check: Settings → UOB One Cashback → current-cycle numbers
+  should roughly match the UOB app (captured spend is a lower bound).
+  Remaining UOB tasks: T-C4 reassign affordance; mapper calibration
+  against the May/Jun statement fixtures; T-C5 PDF import.
+- **Fifth batch DONE 2026-07-06** (Fable 5): (14) doc-drift cleanup —
   DOMAIN_MODEL now documents the soft-delete hash-rename + C1 caveat, hard-
   delete paths, TNG/ShopeePay screenshot channel semantics (empty smsText,
   M-R1 gaps), Daily cycle, ±5% match tolerance, EXPENSE/CREDIT-only

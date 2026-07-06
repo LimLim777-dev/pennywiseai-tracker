@@ -84,3 +84,5 @@ data class TransactionsWithFilter(
     val period: String? = null,
     val currency: String? = null
 )
+@Serializable
+object UobCashback
