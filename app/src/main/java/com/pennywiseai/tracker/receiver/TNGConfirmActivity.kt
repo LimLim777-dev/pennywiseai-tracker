@@ -30,7 +30,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class ShopeePayConfirmActivity : ComponentActivity() {
+class TNGConfirmActivity : ComponentActivity() {
 
     @Inject lateinit var transactionRepository: TransactionRepository
     @Inject lateinit var ruleRepository: RuleRepository
@@ -41,9 +41,10 @@ class ShopeePayConfirmActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val amountStr = intent.getStringExtra(EXTRA_AMOUNT) ?: run { finish(); return }
-        val merchant = intent.getStringExtra(EXTRA_MERCHANT) ?: "ShopeePay"
+        val merchant = intent.getStringExtra(EXTRA_MERCHANT) ?: "TNG eWallet"
         val amount = amountStr.toBigDecimalOrNull() ?: run { finish(); return }
-        val isTransfer = intent.getBooleanExtra(EXTRA_IS_TRANSFER, false)
+        val kindName = intent.getStringExtra(EXTRA_KIND) ?: TNGTransactionKind.PAYMENT.name
+        val kind = runCatching { TNGTransactionKind.valueOf(kindName) }.getOrDefault(TNGTransactionKind.PAYMENT)
         val txnTime = intent.getStringExtra(EXTRA_TIMESTAMP)
             ?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
 
@@ -52,9 +53,10 @@ class ShopeePayConfirmActivity : ComponentActivity() {
                 ConfirmDialog(
                     amount = amount,
                     initialMerchant = merchant,
+                    kind = kind,
                     txnTime = txnTime,
                     onConfirm = { editedAmount, editedMerchant, description ->
-                        saveTransaction(editedAmount, editedMerchant, description, txnTime, isTransfer)
+                        saveTransaction(editedAmount, editedMerchant, description, txnTime, kind)
                         finish()
                     },
                     onDismiss = { finish() }
@@ -67,52 +69,45 @@ class ShopeePayConfirmActivity : ComponentActivity() {
     private fun ConfirmDialog(
         amount: BigDecimal,
         initialMerchant: String,
+        kind: TNGTransactionKind,
         txnTime: LocalDateTime?,
         onConfirm: (amount: BigDecimal, merchant: String, description: String?) -> Unit,
         onDismiss: () -> Unit,
     ) {
         var merchant by remember { mutableStateOf(initialMerchant) }
         var description by remember { mutableStateOf("") }
-        // OCR can misread the amount (e.g. "8" read as "&") — keep it editable.
+        // OCR can misread the amount (e.g. large-font digits) — keep it editable.
         var amountText by remember { mutableStateOf(amount.toPlainString()) }
         val parsedAmount = amountText.trim().toBigDecimalOrNull()
         val amountValid = parsedAmount != null && parsedAmount > BigDecimal.ZERO
         val displayFmt = DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm")
+        val typeLabel = when (kind) {
+            TNGTransactionKind.RECEIVE -> "Income"
+            else -> "Expense"
+        }
 
         AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Add ShopeePay Transaction") },
+            title = { Text("Add TNG Transaction") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    // Date/time from screenshot
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Date / Time", style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(
-                            txnTime?.format(displayFmt) ?: "Now",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Text(txnTime?.format(displayFmt) ?: "Now", style = MaterialTheme.typography.bodyMedium)
                     }
-                    // Category (read-only)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Category", style = MaterialTheme.typography.bodyMedium,
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Type", style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Food & Dining", style = MaterialTheme.typography.bodyMedium)
+                        Text(typeLabel, style = MaterialTheme.typography.bodyMedium)
                     }
 
                     HorizontalDivider()
 
-                    // Amount (editable — OCR is fallible)
                     OutlinedTextField(
                         value = amountText,
                         onValueChange = { amountText = it },
-                        label = { Text("Amount (RM)") },
+                        label = { Text(if (kind == TNGTransactionKind.RECEIVE) "Amount (RM) +" else "Amount (RM) -") },
                         singleLine = true,
                         isError = !amountValid,
                         supportingText = if (!amountValid) {
@@ -121,62 +116,64 @@ class ShopeePayConfirmActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
-                    // Merchant (editable)
                     OutlinedTextField(
                         value = merchant,
                         onValueChange = { merchant = it },
                         label = { Text("Merchant") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(
-                            capitalization = KeyboardCapitalization.Words
-                        )
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words)
                     )
-                    // Description (optional)
                     OutlinedTextField(
                         value = description,
                         onValueChange = { description = it },
                         label = { Text("Description (optional)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(
-                            capitalization = KeyboardCapitalization.Sentences
-                        )
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
                     )
                 }
             },
             confirmButton = {
                 Button(
                     enabled = amountValid && merchant.isNotBlank(),
-                    onClick = {
-                        onConfirm(parsedAmount!!, merchant.trim(), description.trim().ifBlank { null })
-                    }
+                    onClick = { onConfirm(parsedAmount!!, merchant.trim(), description.trim().ifBlank { null }) }
                 ) {
                     Text("Add")
                 }
             },
-            dismissButton = {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-            }
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
         )
     }
 
-    private fun saveTransaction(amount: BigDecimal, merchant: String, description: String?, txnTime: LocalDateTime?, isTransfer: Boolean = false) {
+    private fun saveTransaction(
+        amount: BigDecimal,
+        merchant: String,
+        description: String?,
+        txnTime: LocalDateTime?,
+        kind: TNGTransactionKind
+    ) {
         val dateTime = txnTime ?: LocalDateTime.now()
         val hash = MessageDigest.getInstance("SHA-256")
-            .digest("shopeepay_${amount}_${dateTime}".toByteArray())
+            .digest("tng_${amount}_${dateTime}".toByteArray())
             .joinToString("") { "%02x".format(it) }
             .take(32)
+
+        val (type, category) = when (kind) {
+            TNGTransactionKind.RECEIVE      -> TransactionType.INCOME to "Income"
+            TNGTransactionKind.TRANSFER_OUT -> TransactionType.EXPENSE to "Transfer"
+            TNGTransactionKind.PAYMENT      -> TransactionType.EXPENSE to "Others"
+        }
 
         val entity = TransactionEntity(
             amount = amount,
             merchantName = merchant,
-            category = if (isTransfer) "Transfer" else "Food & Dining",
-            transactionType = if (isTransfer) TransactionType.TRANSFER else TransactionType.EXPENSE,
+            category = category,
+            transactionType = type,
             dateTime = dateTime,
             description = description,
-            bankName = "ShopeePay",
-            smsSender = "ShopeePay",
+            bankName = "TNG eWallet",
+            smsSender = "TNG",
             currency = "MYR",
             transactionHash = hash,
         )
@@ -190,17 +187,16 @@ class ShopeePayConfirmActivity : ComponentActivity() {
                     ruleRepository.saveRuleApplications(withId)
                 }
             } catch (e: Exception) {
-                android.util.Log.e("ShopeePayConfirmActivity", "Rule evaluation failed, saving without rules", e)
+                android.util.Log.e("TNGConfirmActivity", "Rule evaluation failed, saving without rules", e)
                 transactionRepository.insertTransaction(entity)
             }
         }
     }
 
     companion object {
-        const val EXTRA_AMOUNT = "shopeepay_amount"
-        const val EXTRA_MERCHANT = "shopeepay_merchant"
-        const val EXTRA_IMAGE_URI = "shopeepay_image_uri"
-        const val EXTRA_TIMESTAMP = "shopeepay_timestamp"
-        const val EXTRA_IS_TRANSFER = "shopeepay_is_transfer"
+        const val EXTRA_AMOUNT    = "tng_amount"
+        const val EXTRA_MERCHANT  = "tng_merchant"
+        const val EXTRA_TIMESTAMP = "tng_timestamp"
+        const val EXTRA_KIND      = "tng_kind"
     }
 }

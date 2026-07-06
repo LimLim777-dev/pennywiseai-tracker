@@ -134,6 +134,9 @@ fun PennyWiseNavHost(
                 },
                 onNavigateToTransactionGroups = {
                     navController.navigate(TransactionGroups) { launchSingleTop = true }
+                },
+                onNavigateToNotificationLog = {
+                    navController.navigate(NotificationLog) { launchSingleTop = true }
                 }
             )
         }
@@ -202,6 +205,17 @@ fun PennyWiseNavHost(
                 onNavigateBack = {
                     navController.safePopBackStack()
                 }
+            )
+        }
+
+        composable<NotificationLog>(
+            enterTransition = { fadeIn(tween(300)) + slideInVertically { it / 4 } },
+            exitTransition = { fadeOut(tween(200)) },
+            popEnterTransition = { fadeIn(tween(300)) },
+            popExitTransition = { fadeOut(tween(200)) + slideOutVertically { it / 4 } }
+        ) {
+            com.pennywiseai.tracker.ui.screens.notificationlog.NotificationLogScreen(
+                onNavigateBack = { navController.safePopBackStack() }
             )
         }
         

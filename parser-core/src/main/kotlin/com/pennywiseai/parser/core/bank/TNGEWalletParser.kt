@@ -13,13 +13,16 @@ class TNGEWalletParser : BankParser() {
 
     override fun isTransactionMessage(message: String): Boolean {
         val lower = message.lowercase()
-        if (lower.contains("go+")) return false
-        return lower.contains("transferred to") ||
+        val hasTransaction = lower.contains("transferred to") ||
             lower.contains("received from") ||
             lower.contains("successfully transferred") ||
             (lower.contains("has transferred") && lower.contains("to you")) ||
             lower.contains("has been deducted from your tng ewallet") ||
             (lower.contains("received") && lower.contains("cashback"))
+        // Skip GO+ cash-in notifications only when there's no peer transfer content —
+        // stacked notifications can merge GO+ cash-in with a "received from" line.
+        if (lower.contains("go+") && !hasTransaction) return false
+        return hasTransaction
     }
 
     override fun extractAmount(message: String): BigDecimal? {
@@ -70,7 +73,8 @@ class TNGEWalletParser : BankParser() {
     private fun extractCounterparty(message: String): String? {
         val lower = message.lowercase()
         val match = when {
-            lower.contains("successfully transferred") -> SUCCESSFUL_TRANSFER_REGEX.find(message)
+            lower.contains("successfully transferred") ->
+                SUCCESSFUL_TRANSFER_REGEX.find(message) ?: TRANSFER_OUT_REGEX.find(message)
             lower.contains("transferred to") -> TRANSFER_OUT_REGEX.find(message)
             lower.contains("received from") -> RECEIVED_REGEX.find(message)
             else -> HAS_TRANSFERRED_REGEX.find(message)

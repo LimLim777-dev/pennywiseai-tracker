@@ -66,6 +66,15 @@
             android:noHistory="true"
             android:theme="@style/Theme.PennyWise.Transparent" />
 
+        <!-- Translucent activity for confirming TNG eWallet screenshot transactions. -->
+        <activity
+            android:name=".receiver.TNGConfirmActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:theme="@style/Theme.PennyWise.Transparent" />
+
         <!-- Translucent picker launched from the "More categories…" txn-alert
              notification action (#303). singleTask + excludeFromRecents so a
              second tap doesn't stack instances and it never shows in Recents. -->

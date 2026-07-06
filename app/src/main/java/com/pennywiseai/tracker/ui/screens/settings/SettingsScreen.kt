@@ -89,6 +89,7 @@ fun SettingsScreen(
     onNavigateToExchangeRates: () -> Unit = {},
     onNavigateToAppearance: () -> Unit = {},
     onNavigateToImportStatement: () -> Unit = {},
+    onNavigateToNotificationLog: () -> Unit = {},
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     appLockViewModel: com.pennywiseai.tracker.ui.viewmodel.AppLockViewModel = hiltViewModel(),
     permissionViewModel: com.pennywiseai.tracker.ui.viewmodel.PermissionViewModel = hiltViewModel()
@@ -166,6 +167,18 @@ fun SettingsScreen(
             val app = context.applicationContext as? com.pennywiseai.tracker.PennyWiseApplication
             val found = app?.processScreenshotUri(context, uri) ?: false
             shopeeTestMessage = if (found) "ShopeePay detected! Check for notification." else "Not a ShopeePay screenshot."
+        }
+    }
+
+    var tngOcrText by remember { mutableStateOf<String?>(null) }
+    val tngOcrPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        shopeeTestScope.launch {
+            tngOcrText = "Reading…"
+            val raw = com.pennywiseai.tracker.receiver.TNGScreenshotParser.recognizeTextOnly(context, uri)
+            tngOcrText = raw ?: "(OCR returned null — image unreadable)"
         }
     }
 
@@ -516,6 +529,15 @@ fun SettingsScreen(
                     position = ItemPosition.MIDDLE
                 )
                 SettingsNavItem(
+                    icon = Icons.Default.NotificationsActive,
+                    iconBgColor = purple_light,
+                    iconTint = purple_dark,
+                    title = "Notification Log",
+                    subtitle = "View received bank notifications and parse status",
+                    onClick = onNavigateToNotificationLog,
+                    position = ItemPosition.MIDDLE
+                )
+                SettingsNavItem(
                     icon = Icons.Default.CalendarMonth,
                     iconBgColor = teal_light,
                     iconTint = teal_dark,
@@ -565,22 +587,44 @@ fun SettingsScreen(
                         title = "Import ShopeePay Screenshot",
                         subtitle = shopeeTestMessage ?: "Select a ShopeePay payment screenshot",
                         onClick = { shopeeImagePicker.launch("image/*") },
+                        position = ItemPosition.MIDDLE
+                    )
+                    SettingsNavItem(
+                        icon = Icons.Default.ImageSearch,
+                        iconBgColor = purple_light,
+                        iconTint = purple_dark,
+                        title = "TNG OCR Debug",
+                        subtitle = "Select a TNG screenshot to view raw OCR text",
+                        onClick = { tngOcrPicker.launch("image/*") },
                         position = ItemPosition.BOTTOM
                     )
                 }
             }
 
-            // ── AI Features ──
-            SectionHeaderV2(title = "AI Features")
-            SettingsGroup {
-                AiChatSettingsItem(
-                    downloadState = downloadState,
-                    downloadProgress = downloadProgress,
-                    downloadedMB = downloadedMB,
-                    totalMB = totalMB,
-                    onDownload = { settingsViewModel.startModelDownload() },
-                    onCancel = { settingsViewModel.cancelDownload() },
-                    onDelete = { settingsViewModel.deleteModel() }
+            if (tngOcrText != null) {
+                AlertDialog(
+                    onDismissRequest = { tngOcrText = null },
+                    title = { Text("TNG Raw OCR Text") },
+                    text = {
+                        Column(
+                            modifier = Modifier
+                                .heightIn(max = 400.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            // Selectable so the raw OCR text can be copied out for
+                            // regex debugging instead of being screenshotted back.
+                            androidx.compose.foundation.text.selection.SelectionContainer {
+                                Text(
+                                    text = tngOcrText ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { tngOcrText = null }) { Text("Close") }
+                    }
                 )
             }
 

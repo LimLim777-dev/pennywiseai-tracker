@@ -448,6 +448,22 @@ fun MainScreen(
                                 rootNavController?.navigate(
                                     com.pennywiseai.tracker.navigation.TransactionGroups
                                 ) { launchSingleTop = true }
+                            },
+                            onNavigateToNotificationLog = {
+                                navController.navigate("notification_log") {
+                                    launchSingleTop = true
+                                }
+                            }
+                        )
+                    }
+                )
+
+                composable(
+                    route = "notification_log",
+                    content = { _: NavBackStackEntry ->
+                        com.pennywiseai.tracker.ui.screens.notificationlog.NotificationLogScreen(
+                            onNavigateBack = {
+                                navController.safePopBackStack()
                             }
                         )
                     }

@@ -31,6 +31,7 @@ class ScreenshotObserver(
         private const val TAG = "ScreenshotObserver"
         const val CHANNEL_ID = "shopeepay_screenshot"
         private const val NOTIF_ID = 9001
+        private const val NOTIF_ID_TNG = 9002
     }
 
     init {
@@ -41,9 +42,19 @@ class ScreenshotObserver(
         if (!hasMediaPermission()) return
         scope.launch(Dispatchers.IO) {
             val imageUri = findLatestScreenshot(limitToRecentSeconds = 10) ?: return@launch
-            val result = ShopeePayScreenshotParser.parse(context, imageUri) ?: return@launch
-            Log.d(TAG, "ShopeePay screenshot detected: RM${result.amount} @ ${result.merchant}")
-            postConfirmNotification(imageUri, result)
+
+            val shopeeResult = ShopeePayScreenshotParser.parse(context, imageUri)
+            if (shopeeResult != null) {
+                Log.d(TAG, "ShopeePay screenshot detected: RM${shopeeResult.amount} @ ${shopeeResult.merchant}")
+                postConfirmNotification(imageUri, shopeeResult)
+                return@launch
+            }
+
+            val tngResult = TNGScreenshotParser.parse(context, imageUri)
+            if (tngResult != null) {
+                Log.d(TAG, "TNG screenshot detected: RM${tngResult.amount} @ ${tngResult.merchant}")
+                postTNGConfirmNotification(imageUri, tngResult)
+            }
         }
     }
 
@@ -64,9 +75,17 @@ class ScreenshotObserver(
 
     // Process a specific image URI (e.g. picked from gallery).
     suspend fun processUri(uri: Uri): Boolean {
-        val result = ShopeePayScreenshotParser.parse(context, uri) ?: return false
-        postConfirmNotification(uri, result)
-        return true
+        val shopeeResult = ShopeePayScreenshotParser.parse(context, uri)
+        if (shopeeResult != null) {
+            postConfirmNotification(uri, shopeeResult)
+            return true
+        }
+        val tngResult = TNGScreenshotParser.parse(context, uri)
+        if (tngResult != null) {
+            postTNGConfirmNotification(uri, tngResult)
+            return true
+        }
+        return false
     }
 
     // Query MediaStore for a screenshot saved in the last N seconds (null = no time limit).
@@ -128,6 +147,7 @@ class ScreenshotObserver(
             putExtra(ShopeePayConfirmActivity.EXTRA_AMOUNT, result.amount.toPlainString())
             putExtra(ShopeePayConfirmActivity.EXTRA_MERCHANT, result.merchant)
             putExtra(ShopeePayConfirmActivity.EXTRA_IMAGE_URI, imageUri.toString())
+            putExtra(ShopeePayConfirmActivity.EXTRA_IS_TRANSFER, result.isTransfer)
             result.timestamp?.let { putExtra(ShopeePayConfirmActivity.EXTRA_TIMESTAMP, it.toString()) }
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -150,6 +170,39 @@ class ScreenshotObserver(
             == PackageManager.PERMISSION_GRANTED
         ) {
             NotificationManagerCompat.from(context).notify(NOTIF_ID, notif)
+        }
+    }
+
+    private fun postTNGConfirmNotification(imageUri: Uri, result: TNGParseResult) {
+        val intent = Intent(context, TNGConfirmActivity::class.java).apply {
+            putExtra(TNGConfirmActivity.EXTRA_AMOUNT, result.amount.toPlainString())
+            putExtra(TNGConfirmActivity.EXTRA_MERCHANT, result.merchant)
+            putExtra(TNGConfirmActivity.EXTRA_KIND, result.kind.name)
+            result.timestamp?.let { putExtra(TNGConfirmActivity.EXTRA_TIMESTAMP, it.toString()) }
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pending = PendingIntent.getActivity(
+            context, NOTIF_ID_TNG, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val title = when (result.kind) {
+            TNGTransactionKind.RECEIVE -> "TNG — +RM${result.amount}"
+            else -> "TNG — -RM${result.amount}"
+        }
+        val notif = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText("Tap to add: ${result.merchant}")
+            .setContentIntent(pending)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            NotificationManagerCompat.from(context).notify(NOTIF_ID_TNG, notif)
         }
     }
 

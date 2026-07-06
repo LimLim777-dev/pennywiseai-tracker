@@ -64,6 +64,7 @@ fun ListItemCardV2(
     modifier: Modifier = Modifier,
     amountColor: Color = MaterialTheme.colorScheme.onSurface,
     extraLine: String? = null,
+    extraLine2: String? = null,
     leadingContent: @Composable (() -> Unit)? = null,
     trailingContent: @Composable (() -> Unit)? = null,
     shape: CornerBasedShape = MaterialTheme.shapes.large,
@@ -114,6 +115,15 @@ fun ListItemCardV2(
                 if (extraLine != null) {
                     Text(
                         text = extraLine,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (extraLine2 != null) {
+                    Text(
+                        text = extraLine2,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

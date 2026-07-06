@@ -21,6 +21,8 @@ import com.pennywiseai.tracker.ui.LocalNavAnimatedVisibilityScope
 import com.pennywiseai.tracker.ui.LocalSharedTransitionScope
 import com.pennywiseai.tracker.ui.sharedElementIcon
 import com.pennywiseai.tracker.ui.components.BrandIcon
+import com.pennywiseai.tracker.ui.components.BankAccountIcon
+import com.pennywiseai.tracker.ui.icons.BrandIcons
 import com.pennywiseai.tracker.ui.theme.*
 import com.pennywiseai.tracker.utils.CurrencyFormatter
 import com.pennywiseai.tracker.utils.formatAmount
@@ -88,7 +90,6 @@ fun TransactionItem(
             ) {
                 add(transaction.category)
             }
-
             if (showTypeLabel) {
                 when (transaction.transactionType) {
                     TransactionType.CREDIT -> add("Credit")
@@ -126,6 +127,11 @@ fun TransactionItem(
         transaction.formatAmount()
     }
 
+    val personalShare = transaction.personalAmount?.let { share ->
+        if (share != transaction.amount) "My share: ${CurrencyFormatter.formatCurrency(share, transaction.currency)}"
+        else null
+    }
+
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val animatedVisibilityScope = LocalNavAnimatedVisibilityScope.current
     val merchantDisplay = LocalMerchantDisplay.current
@@ -140,6 +146,7 @@ fun TransactionItem(
         title = transferTitle ?: merchantDisplay(transaction.merchantName) ?: transaction.merchantName,
         subtitle = subtitle,
         extraLine = description,
+        extraLine2 = personalShare,
         amount = "$amountPrefix$formattedAmount",
         amountColor = amountColor,
         shape = listItemPosition.toShape(),
@@ -162,13 +169,22 @@ fun TransactionItem(
             } else {
                 Modifier
             }
-            BrandIcon(
-                merchantName = transaction.merchantName,
-                modifier = iconModifier,
-                size = Dimensions.Icon.list,
-                showBackground = true,
-                category = transaction.category
-            )
+            val bankName = transaction.bankName
+            if (bankName != null && BrandIcons.getMalaysianBankAvatar(bankName) != null) {
+                BankAccountIcon(
+                    bankName = bankName,
+                    modifier = iconModifier,
+                    size = Dimensions.Icon.list
+                )
+            } else {
+                BrandIcon(
+                    merchantName = transaction.merchantName,
+                    modifier = iconModifier,
+                    size = Dimensions.Icon.list,
+                    showBackground = true,
+                    category = transaction.category
+                )
+            }
         },
         trailingContent = {
             if (convertedAmount != null && displayCurrency != null) {

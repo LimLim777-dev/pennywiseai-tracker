@@ -16,20 +16,22 @@ data class ShopeePayParseResult(
     val amount: BigDecimal,
     val merchant: String,
     val timestamp: LocalDateTime? = null,
+    val isTransfer: Boolean = false,
 )
 
 object ShopeePayScreenshotParser {
 
-    // The top header always shows "-RM8.83" — most reliable since ML Kit reads it first
-    private val AMOUNT_REGEX_HEADER = Regex("""-RM\s*([\d,]+\.\d{2})""")
-    // Fallback: "You Paid" then find RM amount within generous window (handles row-by-row OCR)
+    // "You Paid RM8.22" — plain-size text, most reliable for OCR
     private val AMOUNT_REGEX_YOU_PAID = Regex("""You Paid[\s\S]{0,300}?RM\s*([\d,]+\.\d{2})""", RegexOption.IGNORE_CASE)
+    // Fallback: header "-RM8.22" (large decorative font, prone to OCR noise like & for 8)
+    private val AMOUNT_REGEX_HEADER = Regex("""-RM\s*([\d,]+\.\d{2})""")
     // Last resort: any RM amount in the document
     private val AMOUNT_REGEX_ANY = Regex("""RM\s*([\d,]+\.\d{2})""")
 
     // Lines to skip when searching for merchant name after "Pay To"
     private val SKIP_LINE_PATTERNS = listOf(
         Regex("""-?RM\s*[\d,]+\.\d{2}.*""", RegexOption.IGNORE_CASE), // amounts like -RM11.50
+        Regex("""-RM.*""", RegexOption.IGNORE_CASE), // OCR-mangled header amount e.g. -RM&.22
         Regex("""Successful""", RegexOption.IGNORE_CASE),
         Regex("""Completed Time.*""", RegexOption.IGNORE_CASE),
         Regex("""View Original Receipt""", RegexOption.IGNORE_CASE),
@@ -44,16 +46,24 @@ object ShopeePayScreenshotParser {
     private val TIMESTAMP_REGEX = Regex("""Completed Time\s+(\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2})""", RegexOption.IGNORE_CASE)
     private val TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm")
 
+    // "Transfer To\nHASRIZAL BIN AUYOP"
+    private val TRANSFER_TO_REGEX = Regex("""Transfer To[\s\r\n]+([^\n\r]+)""", RegexOption.IGNORE_CASE)
+
     suspend fun parse(context: Context, imageUri: Uri): ShopeePayParseResult? {
         val text = recognizeText(context, imageUri) ?: return null
-
-        // Must contain all three ShopeePay payment confirmation markers
         val lower = text.lowercase()
+
+        // ShopeePay DuitNow transfer: "Transfer Detail" + "Transfer To" + "Successful"
+        if (lower.contains("transfer detail") || (lower.contains("transfer to") && lower.contains("transfer from"))) {
+            return parseTransfer(text)
+        }
+
+        // Regular payment: must contain all three ShopeePay payment confirmation markers
         if (!lower.contains("you paid") || !lower.contains("pay to") || !lower.contains("successful")) return null
 
-        // Try header amount first ("-RM8.83"), then "You Paid" region, then any RM amount
-        val amount = (AMOUNT_REGEX_HEADER.find(text)
-            ?: AMOUNT_REGEX_YOU_PAID.find(text)
+        // Try "You Paid" region first (most reliable), then header, then any RM amount
+        val amount = (AMOUNT_REGEX_YOU_PAID.find(text)
+            ?: AMOUNT_REGEX_HEADER.find(text)
             ?: AMOUNT_REGEX_ANY.find(text))
             ?.groupValues?.get(1)
             ?.replace(",", "")
@@ -67,6 +77,20 @@ object ShopeePayScreenshotParser {
             ?.let { runCatching { LocalDateTime.parse(it.trim(), TIMESTAMP_FORMAT) }.getOrNull() }
 
         return ShopeePayParseResult(amount = amount, merchant = merchant, timestamp = timestamp)
+    }
+
+    private fun parseTransfer(text: String): ShopeePayParseResult? {
+        val amount = (AMOUNT_REGEX_HEADER.find(text) ?: AMOUNT_REGEX_ANY.find(text))
+            ?.groupValues?.get(1)?.replace(",", "")?.toBigDecimalOrNull() ?: return null
+
+        val recipient = TRANSFER_TO_REGEX.find(text)?.groupValues?.get(1)?.trim()
+            ?: "ShopeePay Transfer"
+
+        val timestamp = TIMESTAMP_REGEX.find(text)
+            ?.groupValues?.get(1)
+            ?.let { runCatching { LocalDateTime.parse(it.trim(), TIMESTAMP_FORMAT) }.getOrNull() }
+
+        return ShopeePayParseResult(amount = amount, merchant = recipient, timestamp = timestamp, isTransfer = true)
     }
 
     private fun extractMerchant(text: String): String? {

@@ -76,6 +76,9 @@ data class TransactionGroupDetail(val groupId: Long)
 object ImportStatement
 
 @Serializable
+object NotificationLog
+
+@Serializable
 data class TransactionsWithFilter(
     val category: String,
     val period: String? = null,
