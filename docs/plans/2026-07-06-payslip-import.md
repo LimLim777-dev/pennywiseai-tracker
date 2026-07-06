@@ -84,17 +84,26 @@ the UOB cashback plan's cycle engine (T-C2) is the same window abstraction
       Home/Analytics aggregations so end-of-month salary pairs with the
       month it funds. View-layer only — never shifts transaction dates.
 
-## Fixture source (T-P1 — COLLECTED 2026-07-06)
+## Fixture source (T-P1 — COLLECTED 2026-07-06; extraction tool added 2026-07-07)
 
 Three real payslip PDFs exist on the user's machine:
 `D:\Downloads\ME 202601 PENE M33.pdf` (bonus month) ·
 `ME 202604 PENE M33.pdf` (incentive month) ·
 `ME 202606 PENE M33.pdf` (plain month).
 **Do NOT commit the PDFs** — they contain identity data (name, I/C, employee
-id). T-P1 procedure: run the real PDF-text extraction (same library path as
-`GPayPdfParser`) on these files locally, **mask the identity fields in the
-extracted text** (keep labels + amounts), and commit only the masked text
-fixtures. If the files have moved, ask the user to re-share them.
+id).
+
+**T-P1 fixture procedure (tooling now exists)**: the app has Settings →
+**PDF Text Debug** — pick a PDF, it shows the RUNTIME PDFBox
+(`PdfTextExtractor`) output, selectable/copyable. The extraction order of
+the 3-column payslip table is only knowable from this real output — never
+write the parser regexes from the visual layout. Ask the user to run each
+payslip through it and paste the three texts back; **mask the identity
+fields** (name, I/C, employee id, supervisor — keep labels + amounts) and
+commit only the masked texts as fixtures. Then implement
+`PayslipPdfParser : PdfStatementParser` (`canHandle` = employer name +
+PAY PERIOD markers) with the fixtures as tests, following
+`GPayPdfParserTest`'s text-fixture style.
 
 ## Needed from user (给用户)
 

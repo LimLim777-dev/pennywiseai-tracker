@@ -67,6 +67,12 @@ building new pipeline-dependent features.
   + retention; merge dual navigation BEFORE building the Investment tab.
   On-device check for (8): pick a TNG screenshot → edit the amount in the
   dialog → saved transaction shows the edited amount.
+- **Seventh batch DONE 2026-07-07**: (17) Settings → **PDF Text Debug** —
+  pick any PDF, view/copy the runtime PDFBox extraction (SelectionContainer,
+  monospace). This is the fixture-collection tool for T-P1 payslip parser
+  AND the future UOB statement import (T-C5). **User action to unblock
+  T-P1**: run the three payslip PDFs through it and paste the outputs to
+  the next session (identity fields will be masked before committing).
 - **Sixth batch DONE 2026-07-07** (Fable 5, refreshed window): (16)
   **UOB T-C3 screen landed** — Settings → "UOB One Cashback":
   `ui/screens/uob/UobCashbackScreen.kt` + ViewModel feed captured UOB

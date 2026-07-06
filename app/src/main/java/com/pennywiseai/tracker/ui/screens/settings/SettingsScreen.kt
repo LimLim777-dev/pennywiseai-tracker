@@ -183,6 +183,22 @@ fun SettingsScreen(
         }
     }
 
+    // Shows the RUNTIME PDFBox extraction of any picked PDF. This is how raw
+    // parser fixtures are collected (payslips, statements): regexes must be
+    // written against the real extraction order, never against a visual guess.
+    var pdfDebugText by remember { mutableStateOf<String?>(null) }
+    val pdfDebugPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        shopeeTestScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            pdfDebugText = "Extracting…"
+            pdfDebugText = runCatching {
+                com.pennywiseai.tracker.data.statement.PdfTextExtractor.extractText(context, uri)
+            }.getOrElse { "Extraction failed: ${it.message}" }
+        }
+    }
+
     // File picker for import
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -606,9 +622,43 @@ fun SettingsScreen(
                         title = "TNG OCR Debug",
                         subtitle = "Select a TNG screenshot to view raw OCR text",
                         onClick = { tngOcrPicker.launch("image/*") },
+                        position = ItemPosition.MIDDLE
+                    )
+                    SettingsNavItem(
+                        icon = Icons.Default.ImageSearch,
+                        iconBgColor = grey_light,
+                        iconTint = grey_dark,
+                        title = "PDF Text Debug",
+                        subtitle = "Select any PDF to view its extracted text (for parser samples)",
+                        onClick = { pdfDebugPicker.launch("application/pdf") },
                         position = ItemPosition.BOTTOM
                     )
                 }
+            }
+
+            if (pdfDebugText != null) {
+                AlertDialog(
+                    onDismissRequest = { pdfDebugText = null },
+                    title = { Text("PDF Extracted Text") },
+                    text = {
+                        Column(
+                            modifier = Modifier
+                                .heightIn(max = 400.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            androidx.compose.foundation.text.selection.SelectionContainer {
+                                Text(
+                                    text = pdfDebugText ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { pdfDebugText = null }) { Text("Close") }
+                    }
+                )
             }
 
             if (tngOcrText != null) {
