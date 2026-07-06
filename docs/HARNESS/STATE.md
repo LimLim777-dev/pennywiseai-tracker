@@ -67,6 +67,13 @@ building new pipeline-dependent features.
   + retention; merge dual navigation BEFORE building the Investment tab.
   On-device check for (8): pick a TNG screenshot → edit the amount in the
   dialog → saved transaction shows the edited amount.
+- **Ninth batch DONE 2026-07-07**: (19) **H5 landed** — backup now carries
+  `account_ui` (hidden accounts + deleted system rule templates) with
+  defaulted fields per the compatibility contract; importer only overwrites
+  when the section carries values (old backups can't wipe device state);
+  regression test decodes old-shaped JSON. **All review Criticals/Highs
+  are now closed except C1** (🔴 tombstone — the only item awaiting the
+  user's explicit go-ahead).
 - **Eighth batch DONE 2026-07-07**: (18) **H4 dead-letter landed** — an SMS
   that parses but fails to SAVE (exception or unexpected non-dup failure)
   is now recorded into `unrecognized_sms` (unique sender+body dedups

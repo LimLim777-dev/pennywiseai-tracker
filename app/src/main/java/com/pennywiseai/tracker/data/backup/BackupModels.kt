@@ -234,7 +234,25 @@ data class PreferencesSnapshot(
     val developer: DeveloperPreferences = DeveloperPreferences(),
 
     @SerialName("app")
-    val app: AppPreferences = AppPreferences()
+    val app: AppPreferences = AppPreferences(),
+
+    @SerialName("account_ui")
+    val accountUi: AccountUiPreferences = AccountUiPreferences()
+)
+
+/**
+ * UI state kept in the `account_prefs` SharedPreferences file (not
+ * DataStore). Without these a restore on a new phone resurrects deleted
+ * system rule templates and unhides hidden accounts. Defaults are
+ * load-bearing (backup compatibility contract).
+ */
+@Serializable
+data class AccountUiPreferences(
+    @SerialName("hidden_accounts")
+    val hiddenAccounts: List<String> = emptyList(),
+
+    @SerialName("deleted_system_templates")
+    val deletedSystemTemplates: List<String> = emptyList()
 )
 
 @Serializable

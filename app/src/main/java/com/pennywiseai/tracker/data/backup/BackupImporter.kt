@@ -676,5 +676,18 @@ class BackupImporter @Inject constructor(
         preferences.app.lastReviewPromptTime?.let {
             userPreferencesRepository.updateLastReviewPromptTime(it)
         }
+
+        // Account UI state (SharedPreferences, not DataStore): hidden accounts
+        // + deleted system rule templates. Only overwrite when the backup
+        // actually carries values — an older backup without this section must
+        // not wipe the current device's state.
+        val accountUi = preferences.accountUi
+        if (accountUi.hiddenAccounts.isNotEmpty() || accountUi.deletedSystemTemplates.isNotEmpty()) {
+            context.getSharedPreferences("account_prefs", android.content.Context.MODE_PRIVATE)
+                .edit()
+                .putStringSet("hidden_accounts", accountUi.hiddenAccounts.toSet())
+                .putStringSet("deleted_system_templates", accountUi.deletedSystemTemplates.toSet())
+                .apply()
+        }
     }
 }

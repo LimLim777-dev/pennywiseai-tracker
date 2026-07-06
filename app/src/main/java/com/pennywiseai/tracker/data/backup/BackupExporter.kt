@@ -194,7 +194,16 @@ class BackupExporter @Inject constructor(
                     firstLaunchTime = firstLaunchTime,
                     hasShownReviewPrompt = hasShownReviewPrompt,
                     lastReviewPromptTime = lastReviewPromptTime
-                )
+                ),
+                accountUi = run {
+                    val accountPrefs = context.getSharedPreferences("account_prefs", Context.MODE_PRIVATE)
+                    AccountUiPreferences(
+                        hiddenAccounts = accountPrefs.getStringSet("hidden_accounts", emptySet())
+                            .orEmpty().toList().sorted(),
+                        deletedSystemTemplates = accountPrefs.getStringSet("deleted_system_templates", emptySet())
+                            .orEmpty().toList().sorted()
+                    )
+                }
             )
         )
     }
