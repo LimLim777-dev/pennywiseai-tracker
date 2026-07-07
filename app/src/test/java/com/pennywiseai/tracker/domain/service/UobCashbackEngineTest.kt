@@ -107,7 +107,10 @@ class UobCashbackEngineTest {
     }
 
     @Test
-    fun `rebate rounding floors to the cent`() {
+    fun `rebate rounding is half-up to the cent`() {
+        // Calibrated 2026-07-07 against the real APR 2026 statement: dining
+        // 134.20 × 0.2% = 0.2684 was credited as RM0.27 — UOB rounds
+        // half-up, not floor (the engine originally floored).
         val result = engine.evaluate(
             YearMonth.of(2026, 7),
             listOf(
@@ -116,7 +119,45 @@ class UobCashbackEngineTest {
             )
         )
         val grocery = result.categories.first { it.category == UobRebateCategory.GROCERIES }
-        assertEquals(BigDecimal("9.17"), grocery.rebate) // 9.175 floors, never rounds up
+        assertEquals(BigDecimal("9.18"), grocery.rebate) // 9.175 rounds half-up
+    }
+
+    // ---- real-statement acceptance fixture (APR 2026, below-threshold month) ----
+
+    @Test
+    fun `APR 2026 statement reproduces all five real rebate lines at the base rate`() {
+        // Reconstructed from the real 17 APR 26 statement. The two Grab
+        // purchases dated 16 APR posted after the window and their rebate
+        // landed in MAY (verified: MAY's Grab rebate 7.63 = 10% of
+        // 19.80 + 47.47 + 9.00, half-up) — they are excluded here.
+        // Category spends (single txns; mid-window dates avoid boundary
+        // uncertainty — real dates spanned 18 MAR–13 APR):
+        //   dining    134.20  → 0.2684 → 0.27  (discriminates half-up vs floor)
+        //   petrol    100.00  → 0.20
+        //   groceries  26.70  → 0.0534 → 0.05
+        //   grab       16.70  → 0.0334 → 0.03
+        //   others    455.90  → 0.9118 → 0.91  (includes the RM300 insurance
+        //     premium — proving insurance DOES count toward rebate/min spend)
+        // Eligible spend 733.50 < 800 → threshold NOT met, base rate all round.
+        val result = engine.evaluate(
+            YearMonth.of(2026, 4),
+            listOf(
+                txn("2026-03-25", "134.20", UobRebateCategory.DINING),
+                txn("2026-03-25", "100.00", UobRebateCategory.PETROL),
+                txn("2026-03-26", "26.70", UobRebateCategory.GROCERIES),
+                txn("2026-04-01", "16.70", UobRebateCategory.GRAB),
+                txn("2026-04-01", "455.90", UobRebateCategory.OTHERS),
+            )
+        )
+        assertFalse(result.thresholdMet)
+        assertEquals(BigDecimal("733.50"), result.confirmedSpend)
+        fun rebate(cat: UobRebateCategory) = result.categories.first { it.category == cat }.rebate
+        assertEquals(BigDecimal("0.27"), rebate(UobRebateCategory.DINING))
+        assertEquals(BigDecimal("0.20"), rebate(UobRebateCategory.PETROL))
+        assertEquals(BigDecimal("0.05"), rebate(UobRebateCategory.GROCERIES))
+        assertEquals(BigDecimal("0.03"), rebate(UobRebateCategory.GRAB))
+        assertEquals(BigDecimal("0.91"), rebate(UobRebateCategory.OTHERS))
+        assertEquals(BigDecimal("1.46"), result.totalRebate)
     }
 
     // ---- posting-lag assignment + uncertainty ----

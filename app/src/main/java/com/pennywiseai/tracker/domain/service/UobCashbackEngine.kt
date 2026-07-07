@@ -143,11 +143,14 @@ class UobCashbackEngine(
             val spend = confirmed.filter { it.category == cat }.sumOf { it.amount }
             val boosted = thresholdMet && cat != UobRebateCategory.OTHERS
             val rate = if (boosted) config.boostedRate else config.baseRate
-            // Banks floor rebates; DOWN keeps estimates conservative.
-            val raw = (spend * rate).setScale(2, RoundingMode.DOWN)
+            // HALF_UP calibrated against real statements: APR 2026 dining
+            // 134.20 × 0.2% = 0.2684 credited as RM0.27 (floor would give
+            // 0.26), and a cross-statement Grab total of 76.27 × 10% =
+            // 7.627 credited as RM7.63.
+            val raw = (spend * rate).setScale(2, RoundingMode.HALF_UP)
             val capApplies = cat != UobRebateCategory.OTHERS
             val rebate = (if (capApplies) raw.min(config.perCategoryCap) else raw)
-                .setScale(2, RoundingMode.DOWN)
+                .setScale(2, RoundingMode.HALF_UP)
             val capped = capApplies && raw > config.perCategoryCap
             val boostedRemaining = if (boosted) {
                 val capSpend = config.perCategoryCap.divide(config.boostedRate, 2, RoundingMode.DOWN)

@@ -145,8 +145,36 @@ JUN 2026 statement (retail purchase RM1,339.85 ≥ RM800 → 10% tier active):
 
 MAY 2026 statement (retail purchase RM1,008.49 ≥ RM800):
 Petrol RM10.00 (capped) · Grocery RM10.00 (capped) · Dining RM10.00
-(capped) · Grab RM7.63 · Others RM1.08. Three categories capped — exactly
-the "sweet spot" the tracker should surface.
+(capped) · Grab RM7.63 · Others RM1.09 (1.08 in the first transcription
+was a typo — corrected 2026-07-07 against the statement file). Three
+categories capped — exactly the "sweet spot" the tracker should surface.
+
+### Calibration from the APR 2026 statement (RESOLVED 2026-07-07)
+
+Full markdown extractions of APR/MAY/JUN statements were reviewed (local
+files only — never commit them; they carry address + full card number).
+The APR statement is a **below-threshold** month and reconciles to the
+cent, settling two open questions:
+
+1. **Rounding is HALF_UP, not floor**: dining 134.20 × 0.2% = 0.2684 was
+   credited RM0.27; cross-statement Grab 76.27 × 10% = 7.627 credited
+   RM7.63. Engine changed from RoundingMode.DOWN to HALF_UP.
+2. **`GREATEASTERN…` insurance DOES count** toward min spend and the
+   Others rebate: APR Others = MTRUSTEE 11 + ARENA 2.20 + MAXIS 53.90 +
+   SUIWAH 2 + MR DIY 6.90 + BRANDS OUTLET 59.90 + COWAY 20 + GE 300
+   = 455.90 × 0.2% = 0.9118 → RM0.91, exactly the credited line. The T&C
+   insurance exclusion evidently covers only the named products (Liberty,
+   credit shield). No exclusion coded for GE.
+3. **Posting carryover confirmed**: the two Grab lines dated 16 APR print
+   on the APR statement but their rebate landed in MAY (Grab 7.63 =
+   10% × (19.80 + 47.47 + 9.00)) — transaction lines and rebate windows
+   genuinely diverge at the boundary, validating the uncertain-bucket
+   design. APR eligible spend = 800.77 − 67.27 = 733.50 < 800 → base
+   tier, hence the five tiny rebate lines.
+
+`UobCashbackEngineTest` now pins the APR statement as a five-line
+acceptance fixture (base-rate month; the 0.27 line discriminates half-up
+from floor).
 
 T-C2 test task: reconstruct each statement's transaction list from the user
 (or T-C5 PDF import), run the engine, assert the five rebate numbers per
