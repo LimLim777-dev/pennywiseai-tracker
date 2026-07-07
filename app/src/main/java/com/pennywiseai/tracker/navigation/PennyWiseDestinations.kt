@@ -86,3 +86,17 @@ data class TransactionsWithFilter(
 )
 @Serializable
 object UobCashback
+
+@Serializable
+object ManageAccounts
+
+@Serializable
+object AddAccount
+
+// Property names must stay bankName/accountLast4 — BalanceHistoryViewModel
+// reads them from SavedStateHandle by these keys.
+@Serializable
+data class BalanceHistory(val bankName: String, val accountLast4: String)
+
+@Serializable
+object Appearance

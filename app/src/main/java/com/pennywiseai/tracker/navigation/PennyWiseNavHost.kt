@@ -120,11 +120,23 @@ fun PennyWiseNavHost(
                 onNavigateToUnrecognizedSms = {
                     navController.navigate(UnrecognizedSms) { launchSingleTop = true }
                 },
+                onNavigateToManageAccounts = {
+                    navController.navigate(ManageAccounts) { launchSingleTop = true }
+                },
                 onNavigateToFaq = {
                     navController.navigate(Faq) { launchSingleTop = true }
                 },
+                onNavigateToRules = {
+                    navController.navigate(Rules) { launchSingleTop = true }
+                },
                 onNavigateToBudgets = {
                     navController.navigate(BudgetGroups) { launchSingleTop = true }
+                },
+                onNavigateToLoans = {
+                    navController.navigate(Loans) { launchSingleTop = true }
+                },
+                onNavigateToAppearance = {
+                    navController.navigate(Appearance) { launchSingleTop = true }
                 },
                 onNavigateToExchangeRates = {
                     navController.navigate(ExchangeRates) { launchSingleTop = true }
@@ -473,6 +485,67 @@ fun PennyWiseNavHost(
                 onNavigateBack = {
                     navController.safePopBackStack()
                 }
+            )
+        }
+
+        composable<ManageAccounts>(
+            enterTransition = { fadeIn(tween(300)) + slideInVertically { it / 4 } },
+            exitTransition = { fadeOut(tween(200)) },
+            popEnterTransition = { fadeIn(tween(300)) },
+            popExitTransition = { fadeOut(tween(200)) + slideOutVertically { it / 4 } }
+        ) {
+            com.pennywiseai.tracker.presentation.accounts.ManageAccountsScreen(
+                onNavigateBack = {
+                    navController.safePopBackStack()
+                },
+                onNavigateToAddAccount = {
+                    navController.navigate(AddAccount) { launchSingleTop = true }
+                },
+                onNavigateToBalanceHistory = { bankName, accountLast4 ->
+                    navController.navigate(BalanceHistory(bankName, accountLast4)) {
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        composable<AddAccount>(
+            enterTransition = { fadeIn(tween(300)) + slideInVertically { it / 4 } },
+            exitTransition = { fadeOut(tween(200)) },
+            popEnterTransition = { fadeIn(tween(300)) },
+            popExitTransition = { fadeOut(tween(200)) + slideOutVertically { it / 4 } }
+        ) {
+            com.pennywiseai.tracker.presentation.accounts.AddAccountScreen(
+                onNavigateBack = {
+                    navController.safePopBackStack()
+                }
+            )
+        }
+
+        composable<BalanceHistory>(
+            enterTransition = { fadeIn(tween(300)) + slideInVertically { it / 4 } },
+            exitTransition = { fadeOut(tween(200)) },
+            popEnterTransition = { fadeIn(tween(300)) },
+            popExitTransition = { fadeOut(tween(200)) + slideOutVertically { it / 4 } }
+        ) {
+            com.pennywiseai.tracker.presentation.accounts.BalanceHistoryScreen(
+                onNavigateBack = {
+                    navController.safePopBackStack()
+                }
+            )
+        }
+
+        composable<Appearance>(
+            enterTransition = { fadeIn(tween(300)) + slideInVertically { it / 4 } },
+            exitTransition = { fadeOut(tween(200)) },
+            popEnterTransition = { fadeIn(tween(300)) },
+            popExitTransition = { fadeOut(tween(200)) + slideOutVertically { it / 4 } }
+        ) {
+            com.pennywiseai.tracker.ui.screens.settings.AppearanceScreen(
+                onNavigateBack = {
+                    navController.safePopBackStack()
+                },
+                themeViewModel = themeViewModel
             )
         }
 

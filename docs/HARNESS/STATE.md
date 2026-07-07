@@ -36,6 +36,23 @@ building new pipeline-dependent features.
 
 ## Open items (unblocked)
 
+- **Seventeenth batch DONE 2026-07-08**: (31) **M6 dual-navigation merge
+  landed** — every leaf screen is now registered ONCE, in the root typed
+  NavHost; MainScreen's inner string graph keeps only the bottom-nav tabs
+  (home / transactions / subscriptions / analytics / chat / settings).
+  New typed routes: ManageAccounts, AddAccount,
+  BalanceHistory(bankName, accountLast4) (property names pinned to the
+  ViewModel's SavedStateHandle keys), Appearance. Settings-tab and
+  HomeScreen leaf callbacks now go through rootNavController. Also fixed
+  latent dead buttons: the root Settings registration was missing the
+  ManageAccounts/Rules/Loans/Appearance callbacks (reachable via
+  budget-drilldown → Settings). **New-screen rule going forward: register
+  in the root typed NavHost only; MainScreen only changes when adding a
+  bottom-nav TAB** (that's the Investment-tab step). On-device check:
+  from Settings open every sub-screen (incl. Appearance theme change
+  applying immediately); Home → Accounts; Manage Accounts → History /
+  Add Account.
+
 - **Sixteenth batch DONE 2026-07-08**: (28) credit-card cards created from
   SMS now expose **Edit** in the overflow menu (was Update-only — wrong
   card last4 / non-MYR currency were uncorrectable; user's UOB card showed

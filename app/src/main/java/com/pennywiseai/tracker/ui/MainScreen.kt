@@ -28,19 +28,12 @@ import androidx.navigation.navArgument
 import com.pennywiseai.tracker.data.contacts.LocalMerchantDisplay
 import com.pennywiseai.tracker.data.contacts.displayMerchantName
 import com.pennywiseai.tracker.navigation.safePopBackStack
-import com.pennywiseai.tracker.presentation.accounts.AddAccountScreen
-import com.pennywiseai.tracker.presentation.accounts.ManageAccountsScreen
-import com.pennywiseai.tracker.presentation.accounts.ManageAccountsViewModel
 import com.pennywiseai.tracker.presentation.home.HomeScreen
-import com.pennywiseai.tracker.presentation.statement.ImportStatementScreen
-import com.pennywiseai.tracker.presentation.statement.ImportStatementViewModel
 import com.pennywiseai.tracker.presentation.subscriptions.SubscriptionsScreen
 import com.pennywiseai.tracker.presentation.transactions.TransactionsScreen
 import com.pennywiseai.tracker.ui.components.PennyWiseBottomNavigation
 import com.pennywiseai.tracker.ui.components.SpotlightTutorial
 import com.pennywiseai.tracker.ui.components.WhatsNewDialog
-import com.pennywiseai.tracker.ui.screens.settings.AppearanceScreen
-import com.pennywiseai.tracker.ui.screens.settings.FAQScreen
 import com.pennywiseai.tracker.ui.screens.settings.SettingsScreen
 import com.pennywiseai.tracker.ui.viewmodel.MainViewModel
 import com.pennywiseai.tracker.ui.viewmodel.SpotlightViewModel
@@ -190,9 +183,9 @@ fun MainScreen(
                                 ) { launchSingleTop = true }
                             },
                             onNavigateToManageAccounts = {
-                                navController.navigate("manage_accounts") {
-                                    launchSingleTop = true
-                                }
+                                rootNavController?.navigate(
+                                    com.pennywiseai.tracker.navigation.ManageAccounts
+                                ) { launchSingleTop = true }
                             },
                             onNavigateToAddScreen = {
                                 rootNavController?.navigate(
@@ -389,30 +382,33 @@ fun MainScreen(
                 composable(
                     route = "settings",
                     content = { _: NavBackStackEntry ->
+                        // All leaf screens live in the root typed NavHost (M6
+                        // dual-navigation merge) — the inner graph only holds
+                        // the bottom-nav tabs.
                         SettingsScreen(
                             themeViewModel = themeViewModel,
                             onNavigateBack = {
                                 navController.safePopBackStack()
                             },
                             onNavigateToCategories = {
-                                navController.navigate("categories") {
-                                    launchSingleTop = true
-                                }
+                                rootNavController?.navigate(
+                                    com.pennywiseai.tracker.navigation.Categories
+                                ) { launchSingleTop = true }
                             },
                             onNavigateToUnrecognizedSms = {
-                                navController.navigate("unrecognized_sms") {
-                                    launchSingleTop = true
-                                }
+                                rootNavController?.navigate(
+                                    com.pennywiseai.tracker.navigation.UnrecognizedSms
+                                ) { launchSingleTop = true }
                             },
                             onNavigateToManageAccounts = {
-                                navController.navigate("manage_accounts") {
-                                    launchSingleTop = true
-                                }
+                                rootNavController?.navigate(
+                                    com.pennywiseai.tracker.navigation.ManageAccounts
+                                ) { launchSingleTop = true }
                             },
                             onNavigateToFaq = {
-                                navController.navigate("faq") {
-                                    launchSingleTop = true
-                                }
+                                rootNavController?.navigate(
+                                    com.pennywiseai.tracker.navigation.Faq
+                                ) { launchSingleTop = true }
                             },
                             onNavigateToRules = {
                                 rootNavController?.navigate(
@@ -435,14 +431,14 @@ fun MainScreen(
                                 ) { launchSingleTop = true }
                             },
                             onNavigateToAppearance = {
-                                navController.navigate("appearance") {
-                                    launchSingleTop = true
-                                }
+                                rootNavController?.navigate(
+                                    com.pennywiseai.tracker.navigation.Appearance
+                                ) { launchSingleTop = true }
                             },
                             onNavigateToImportStatement = {
-                                navController.navigate("import_statement") {
-                                    launchSingleTop = true
-                                }
+                                rootNavController?.navigate(
+                                    com.pennywiseai.tracker.navigation.ImportStatement
+                                ) { launchSingleTop = true }
                             },
                             onNavigateToTransactionGroups = {
                                 rootNavController?.navigate(
@@ -450,151 +446,19 @@ fun MainScreen(
                                 ) { launchSingleTop = true }
                             },
                             onNavigateToNotificationLog = {
-                                navController.navigate("notification_log") {
-                                    launchSingleTop = true
-                                }
+                                rootNavController?.navigate(
+                                    com.pennywiseai.tracker.navigation.NotificationLog
+                                ) { launchSingleTop = true }
                             },
                             onNavigateToUobCashback = {
-                                navController.navigate("uob_cashback") {
-                                    launchSingleTop = true
-                                }
+                                rootNavController?.navigate(
+                                    com.pennywiseai.tracker.navigation.UobCashback
+                                ) { launchSingleTop = true }
                             }
                         )
                     }
                 )
 
-                composable(
-                    route = "notification_log",
-                    content = { _: NavBackStackEntry ->
-                        com.pennywiseai.tracker.ui.screens.notificationlog.NotificationLogScreen(
-                            onNavigateBack = {
-                                navController.safePopBackStack()
-                            }
-                        )
-                    }
-                )
-
-                composable(
-                    route = "uob_cashback",
-                    content = { _: NavBackStackEntry ->
-                        com.pennywiseai.tracker.ui.screens.uob.UobCashbackScreen(
-                            onNavigateBack = {
-                                navController.safePopBackStack()
-                            }
-                        )
-                    }
-                )
-
-                composable(
-                    route = "appearance",
-                    content = { _: NavBackStackEntry ->
-                        AppearanceScreen(
-                            onNavigateBack = {
-                                navController.safePopBackStack()
-                            },
-                            themeViewModel = themeViewModel
-                        )
-                    }
-                )
-
-                composable(
-                    route = "categories",
-                    content = { _: NavBackStackEntry ->
-                        com.pennywiseai.tracker.presentation.categories.CategoriesScreen(
-                            onNavigateBack = {
-                                navController.safePopBackStack()
-                            }
-                        )
-                    }
-                )
-
-                composable(
-                    route = "unrecognized_sms",
-                    content = { _: NavBackStackEntry ->
-                        com.pennywiseai.tracker.ui.screens.unrecognized.UnrecognizedSmsScreen(
-                            onNavigateBack = {
-                                navController.safePopBackStack()
-                            }
-                        )
-                    }
-                )
-
-                composable(
-                    route = "faq",
-                    content = { _: NavBackStackEntry ->
-                        FAQScreen(
-                            onNavigateBack = {
-                                navController.safePopBackStack()
-                            }
-                        )
-                    }
-                )
-
-                composable(
-                    route = "manage_accounts",
-                    content = { _: NavBackStackEntry ->
-                        val viewModel: ManageAccountsViewModel = hiltViewModel()
-                        ManageAccountsScreen(
-                            viewModel = viewModel,
-                            onNavigateBack = {
-                                navController.safePopBackStack()
-                            },
-                            onNavigateToAddAccount = {
-                                navController.navigate("add_account") {
-                                    launchSingleTop = true
-                                }
-                            },
-                            onNavigateToBalanceHistory = { bankName, accountLast4 ->
-                                navController.navigate(
-                                    "balance_history/${android.net.Uri.encode(bankName)}/${android.net.Uri.encode(accountLast4)}"
-                                ) {
-                                    launchSingleTop = true
-                                }
-                            }
-                        )
-                    }
-                )
-
-                composable(
-                    route = "balance_history/{bankName}/{accountLast4}",
-                    arguments = listOf(
-                        androidx.navigation.navArgument("bankName") { type = androidx.navigation.NavType.StringType },
-                        androidx.navigation.navArgument("accountLast4") { type = androidx.navigation.NavType.StringType }
-                    ),
-                    content = { _: NavBackStackEntry ->
-                        com.pennywiseai.tracker.presentation.accounts.BalanceHistoryScreen(
-                            onNavigateBack = {
-                                navController.safePopBackStack()
-                            }
-                        )
-                    }
-                )
-
-                composable(
-                    route = "import_statement",
-                    content = { _: NavBackStackEntry ->
-                        val viewModel: ImportStatementViewModel = hiltViewModel()
-                        ImportStatementScreen(
-                            viewModel = viewModel,
-                            onNavigateBack = {
-                                navController.safePopBackStack()
-                            }
-                        )
-                    }
-                )
-
-                composable(
-                    route = "add_account",
-                    content = { _: NavBackStackEntry ->
-                        val viewModel: ManageAccountsViewModel = hiltViewModel()
-                        AddAccountScreen(
-                            viewModel = viewModel,
-                            onNavigateBack = {
-                                navController.safePopBackStack()
-                            }
-                        )
-                    }
-                )
             }
 
             // Bottom navigation OVERLAID on content
