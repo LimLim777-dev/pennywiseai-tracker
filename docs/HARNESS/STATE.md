@@ -303,6 +303,16 @@ building new pipeline-dependent features.
 
 ## Pending on-device checks
 
+- **2026-07-08 user-verified ✅**: Notification Log banner GREEN (listener
+  rebind fix works); UOB card edited to real last4 + MYR via the new
+  credit-card Edit menu; three expense-autopay subscriptions created
+  (Great Eastern / Maxis / Coway); Tabung Daily Bonus smart rule toggled
+  ON. Watch next: first phantom auto-debit rows appear on their due
+  dates; daily RM1.00 Tabung income generates; next TNG "Transferred to"
+  notification should now reach the log (copy body if it parses wrong).
+- 2026-07-08 build `a5f12b17` NOT yet verified: M6 nav regression pass
+  (all Settings sub-screens, Home → Accounts, Appearance theme applies)
+  + Invest tab (create the 6 investment accounts, per-currency totals).
 - 2026-07-06 build (TNG screenshot flow): six TNG screenshot types parse
   correctly ✅ (user-verified); Smart Rules run on screenshot-confirmed
   transactions ✅ (user-verified). Remaining: ShopeePay screenshot still
