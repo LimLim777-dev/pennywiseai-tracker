@@ -307,7 +307,9 @@ building new pipeline-dependent features.
   rebind fix works); UOB card edited to real last4 + MYR via the new
   credit-card Edit menu; three expense-autopay subscriptions created
   (Great Eastern / Maxis / Coway); Tabung Daily Bonus smart rule toggled
-  ON. Watch next: first phantom auto-debit rows appear on their due
+  ON; EPF subscription renamed to "KWSP" (matches the MAE DuitNow
+  AutoDebit merchant → auto Mark-as-Paid from the next RM250 charge).
+  Watch next: first phantom auto-debit rows appear on their due
   dates; daily RM1.00 Tabung income generates; next TNG "Transferred to"
   notification should now reach the log (copy body if it parses wrong).
 - 2026-07-08 build `a5f12b17` NOT yet verified: M6 nav regression pass
