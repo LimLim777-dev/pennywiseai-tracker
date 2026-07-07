@@ -192,6 +192,18 @@ object UobCategoryMapper {
         "SETEL", "PETRONAS", "SHELL", "PETRON", "CALTEX", "BHPETROL", "BHP ",
     )
 
+    // Calibrated against the APR–JUN 2026 statements: generic F&B words plus
+    // the statement-observed merchants UOB's dining rebate line covers
+    // (APR's dining rebate reconciles to a single PEPPER WESTERN charge;
+    // JUN's capped dining is carried by PARA THAI). Kept conservative —
+    // ambiguous names (generic "SDN BHD" merchants) stay OTHERS, because a
+    // wrong DINING guess overstates the 10% rebate estimate.
+    private val DINING_KEYWORDS = listOf(
+        "COFFEE", "CAFE", "KOPITIAM", "SUSHI", "KITCHEN", "RESTAURANT",
+        "RESTORAN", "BISTRO", "BAKERY", "PEPPER WESTERN", "PARA THAI",
+        "ZUS",
+    )
+
     fun categorize(merchantName: String, overrides: Map<String, UobRebateCategory> = emptyMap()): UobRebateCategory {
         val name = merchantName.trim().uppercase()
         overrides[name]?.let { return it }
@@ -199,6 +211,7 @@ object UobCategoryMapper {
             name.startsWith("GRAB") -> UobRebateCategory.GRAB
             PETROL_KEYWORDS.any { name.contains(it) } -> UobRebateCategory.PETROL
             GROCERY_KEYWORDS.any { name.contains(it) } -> UobRebateCategory.GROCERIES
+            DINING_KEYWORDS.any { name.contains(it) } -> UobRebateCategory.DINING
             else -> UobRebateCategory.OTHERS
         }
     }

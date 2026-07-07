@@ -139,7 +139,7 @@ JUN 2026 statement (retail purchase RM1,339.85 ≥ RM800 → 10% tier active):
 |---|---|---|
 | Dining | RM10.00 **(capped)** | ≥ RM100 |
 | Petrol | RM8.00 | RM80.00 |
-| Grocery | RM6.28 | RM62.80 |
+| Grocery | RM8.28 | RM82.80 (first transcription said 6.28 — corrected 2026-07-08 against the statement file) |
 | Grab | RM3.92 | RM39.20 |
 | Others | RM1.82 | RM910 @ 0.2% |
 

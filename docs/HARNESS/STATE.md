@@ -36,6 +36,20 @@ building new pipeline-dependent features.
 
 ## Open items (unblocked)
 
+- **Sixteenth batch DONE 2026-07-08**: (28) credit-card cards created from
+  SMS now expose **Edit** in the overflow menu (was Update-only — wrong
+  card last4 / non-MYR currency were uncorrectable; user's UOB card showed
+  ••1234 + wrong currency). (29) **MAY + JUN 2026 statements pinned as
+  engine acceptance fixtures** (10% tier: JUN five-line, MAY triple-capped
+  sweet spot + the 76.27 Grab carryover half-up evidence). Re-reading the
+  statement file caught a plan-doc transcription error: JUN grocery rebate
+  is **8.28, not 6.28** (doc corrected). (30) **UobCategoryMapper dining
+  calibrated**: DINING_KEYWORDS added (generic F&B words + PEPPER WESTERN,
+  reconciled exactly to APR's dining line, + PARA THAI carrying JUN's cap);
+  SUIWAH/MR DIY deliberately stay OTHERS (matches UOB's own attribution).
+  All app tests green. On-device: UOB card ⋮ → Edit → set last4 2695 +
+  currency MYR; Cashback screen should now attribute F&B spend to Dining.
+
 - **Fifteenth batch DONE 2026-07-07** (user-reported incident): notification
   capture had been silently dead since ~4 Jul (Android's post-APK-update
   listener unbind bug — LESSONS entry added). (26) MainActivity nudges

@@ -160,6 +160,81 @@ class UobCashbackEngineTest {
         assertEquals(BigDecimal("1.46"), result.totalRebate)
     }
 
+    // ---- real-statement acceptance fixtures (MAY/JUN 2026, 10% tier) ----
+
+    @Test
+    fun `JUN 2026 statement reproduces all five real rebate lines at the boosted tier`() {
+        // Real 17 JUN 26 statement: retail purchase RM1,339.85 ≥ 800 → 10%
+        // tier. Rebate lines re-read from the statement file 2026-07-08 (the
+        // plan doc's "Grocery 6.28" was a transcription error — the credited
+        // line is 8.28). Per-category eligible spends reconstructed from the
+        // credited rebate lines (rebate ÷ rate); dining is capped so its
+        // exact spend isn't recoverable — it takes the remainder to make the
+        // statement's retail total, and any value ≥ RM100 caps at RM10:
+        //   dining    227.85  → capped     → 10.00
+        //   petrol     80.00  → 10%        →  8.00
+        //   groceries  82.80  → 10%        →  8.28
+        //   grab       39.20  → 10%        →  3.92
+        //   others    910.00  → 0.2%       →  1.82  (OTHERS stays base at tier)
+        val result = engine.evaluate(
+            YearMonth.of(2026, 6),
+            listOf(
+                txn("2026-05-25", "227.85", UobRebateCategory.DINING),
+                txn("2026-05-25", "80.00", UobRebateCategory.PETROL),
+                txn("2026-05-26", "82.80", UobRebateCategory.GROCERIES),
+                txn("2026-06-01", "39.20", UobRebateCategory.GRAB),
+                txn("2026-06-01", "910.00", UobRebateCategory.OTHERS),
+            )
+        )
+        assertTrue(result.thresholdMet)
+        assertEquals(BigDecimal("1339.85"), result.confirmedSpend)
+        fun cat(c: UobRebateCategory) = result.categories.first { it.category == c }
+        assertEquals(BigDecimal("10.00"), cat(UobRebateCategory.DINING).rebate)
+        assertTrue(cat(UobRebateCategory.DINING).capped)
+        assertEquals(BigDecimal("8.00"), cat(UobRebateCategory.PETROL).rebate)
+        assertEquals(BigDecimal("8.28"), cat(UobRebateCategory.GROCERIES).rebate)
+        assertEquals(BigDecimal("3.92"), cat(UobRebateCategory.GRAB).rebate)
+        assertEquals(BigDecimal("1.82"), cat(UobRebateCategory.OTHERS).rebate)
+        assertEquals(BigDecimal("32.02"), result.totalRebate)
+    }
+
+    @Test
+    fun `MAY 2026 statement reproduces the triple-capped sweet spot and boundary carryover`() {
+        // Real 17 MAY 26 statement: retail purchase RM1,008.49 ≥ 800.
+        // Petrol, grocery AND dining all credited RM10.00 (capped) — the
+        // exact split among the three isn't recoverable from the rebate
+        // lines (any split with each ≥ RM100 caps identically); the fixture
+        // splits their RM387.22 remainder arbitrarily. The uncapped lines
+        // are exact:
+        //   grab    76.27  → 7.627 → 7.63  (half-up at the 10% tier; the
+        //     76.27 is the verified carryover: 19.80 + 47.47 + 9.00 dated
+        //     16 APR posted into MAY — the boundary-divergence evidence)
+        //   others 545.00  → 1.09  (1.08 in the first transcription was a
+        //     typo — corrected against the statement file)
+        val result = engine.evaluate(
+            YearMonth.of(2026, 5),
+            listOf(
+                txn("2026-04-25", "120.00", UobRebateCategory.PETROL),
+                txn("2026-04-25", "130.00", UobRebateCategory.GROCERIES),
+                txn("2026-04-26", "137.22", UobRebateCategory.DINING),
+                txn("2026-05-01", "76.27", UobRebateCategory.GRAB),
+                txn("2026-05-01", "545.00", UobRebateCategory.OTHERS),
+            )
+        )
+        assertTrue(result.thresholdMet)
+        assertEquals(BigDecimal("1008.49"), result.confirmedSpend)
+        fun cat(c: UobRebateCategory) = result.categories.first { it.category == c }
+        assertEquals(BigDecimal("10.00"), cat(UobRebateCategory.PETROL).rebate)
+        assertEquals(BigDecimal("10.00"), cat(UobRebateCategory.GROCERIES).rebate)
+        assertEquals(BigDecimal("10.00"), cat(UobRebateCategory.DINING).rebate)
+        assertTrue(cat(UobRebateCategory.PETROL).capped)
+        assertTrue(cat(UobRebateCategory.GROCERIES).capped)
+        assertTrue(cat(UobRebateCategory.DINING).capped)
+        assertEquals(BigDecimal("7.63"), cat(UobRebateCategory.GRAB).rebate)
+        assertEquals(BigDecimal("1.09"), cat(UobRebateCategory.OTHERS).rebate)
+        assertEquals(BigDecimal("38.72"), result.totalRebate)
+    }
+
     // ---- posting-lag assignment + uncertainty ----
 
     @Test
@@ -208,6 +283,23 @@ class UobCashbackEngineTest {
         assertEquals(UobRebateCategory.GROCERIES, UobCategoryMapper.categorize("LOTUS'S PENANG SG DUA"))
         assertEquals(UobRebateCategory.GROCERIES, UobCategoryMapper.categorize("AEON CO-QUEENSBAY MALL"))
         assertEquals(UobRebateCategory.OTHERS, UobCategoryMapper.categorize("BOOKMYSHOW - ECOM"))
+    }
+
+    @Test
+    fun `mapper covers statement-verified dining merchants`() {
+        // PEPPER WESTERN reconciles exactly to APR's dining rebate line;
+        // PARA THAI carries JUN's capped dining. The rest are the user's
+        // recurring F&B merchants matched by generic keywords.
+        assertEquals(UobRebateCategory.DINING, UobCategoryMapper.categorize("PEPPER WESTERN - PASTA"))
+        assertEquals(UobRebateCategory.DINING, UobCategoryMapper.categorize("PARA THAI QUEENSBAY MALL"))
+        assertEquals(UobRebateCategory.DINING, UobCategoryMapper.categorize("ZUS COFFEE"))
+        assertEquals(UobRebateCategory.DINING, UobCategoryMapper.categorize("PYX*DAILY COFFEE"))
+        assertEquals(UobRebateCategory.DINING, UobCategoryMapper.categorize("SUSHI KING-QUEENSBAY MALL"))
+        assertEquals(UobRebateCategory.DINING, UobCategoryMapper.categorize("ROCK TILL DAWN KITCHEN"))
+        // UOB's own rebate attribution puts these in OTHERS — don't "improve" them:
+        // Suiwah (supermarket) appeared in APR's reconciled Others sum.
+        assertEquals(UobRebateCategory.OTHERS, UobCategoryMapper.categorize("SUIWAH HOLDINGS"))
+        assertEquals(UobRebateCategory.OTHERS, UobCategoryMapper.categorize("MR DIY (H)-QMP"))
     }
 
     @Test
