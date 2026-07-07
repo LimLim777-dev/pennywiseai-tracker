@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.*
@@ -79,6 +80,13 @@ fun TransactionTabContent(
     var showAccountMenu by remember { mutableStateOf(false) }
     var showCurrencyMenu by remember { mutableStateOf(false) }
 
+    // Amount is the first thing typed on every manual entry (tap-to-pay
+    // purchases especially) — focus it and raise the keyboard on open.
+    val amountFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(Unit) {
+        if (uiState.amount.isEmpty()) amountFocusRequester.requestFocus()
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -133,7 +141,9 @@ fun TransactionTabContent(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     isError = uiState.amountError != null,
                     supportingText = uiState.amountError?.let { { Text(it) } },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(amountFocusRequester),
                     singleLine = true,
                     shape = fullShape,
                     colors = filledFieldColors()

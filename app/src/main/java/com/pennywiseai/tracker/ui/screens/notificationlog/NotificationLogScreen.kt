@@ -5,6 +5,8 @@ import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -36,6 +38,16 @@ fun NotificationLogScreen(
     viewModel: NotificationLogViewModel = hiltViewModel()
 ) {
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
+    // Sender filter — the log is the sample-collection tool for parser work;
+    // filtering to one app beats scrolling the merged stream.
+    var senderFilter by remember { mutableStateOf<String?>(null) }
+    val senders = remember(notifications) {
+        notifications.map { it.senderAlias }.distinct().sorted()
+    }
+    val visibleNotifications = remember(notifications, senderFilter) {
+        if (senderFilter == null) notifications
+        else notifications.filter { it.senderAlias == senderFilter }
+    }
 
     Scaffold(
         topBar = {
@@ -51,13 +63,37 @@ fun NotificationLogScreen(
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             ListenerStatusBanner()
-            if (notifications.isEmpty()) {
+            if (senders.size > 1) {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        FilterChip(
+                            selected = senderFilter == null,
+                            onClick = { senderFilter = null },
+                            label = { Text("All") }
+                        )
+                    }
+                    items(senders) { sender ->
+                        FilterChip(
+                            selected = senderFilter == sender,
+                            onClick = {
+                                senderFilter = if (senderFilter == sender) null else sender
+                            },
+                            label = { Text(sender) }
+                        )
+                    }
+                }
+            }
+            if (visibleNotifications.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No notifications received yet",
+                        text = if (notifications.isEmpty()) "No notifications received yet"
+                               else "No notifications from ${senderFilter ?: "this sender"}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -68,7 +104,7 @@ fun NotificationLogScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    itemsIndexed(notifications.reversed()) { _, item ->
+                    itemsIndexed(visibleNotifications.reversed()) { _, item ->
                         NotificationLogCard(item)
                     }
                 }

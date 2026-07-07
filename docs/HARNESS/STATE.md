@@ -36,6 +36,15 @@ building new pipeline-dependent features.
 
 ## Open items (unblocked)
 
+- **Twenty-third batch DONE 2026-07-08** (frontend backlog #2+#8): (40)
+  Notification Log gained a **sender FilterChip row** (All / per-app;
+  shown only when >1 sender) — sample collection no longer scrolls the
+  merged stream. (41) **Add-transaction amount field auto-focuses** with
+  the keyboard on a fresh add (skipped when prefilled/duplicated) —
+  the tap-to-pay manual-entry friction item. Frontend backlog now:
+  #4 error surfacing (partial), #6 god-file splits (opportunistic),
+  #7 paging (deferred until felt).
+
 - **Twenty-second batch DONE 2026-07-08** (subaccounts T1.3): (39)
   **Update-balance wired to interest derivation** for the five savings
   sub-account bank names (`SAVINGS_SUB_ACCOUNT_BANKS`: Boost Jar /

@@ -77,7 +77,9 @@ Ordered by value/effort for THIS user's workflows:
 
 1. ~~Confirm-dialog amount editable~~ **DONE 2026-07-06** (TNG + ShopeePay:
    amount is an editable field with validation; Add disabled until valid).
-2. **Notification Log: per-entry "copy body" button + sender filter.** The
+2. ~~Notification Log: per-entry "copy body" button + sender filter~~
+   **DONE** (copy button + 30-day retention 2026-07-07; sender FilterChip
+   row 2026-07-08).** The
    log is the user's sample-collection tool for every parser task (already
    used to confirm the Maybank loan sample); long-press copy of the raw
    body directly feeds the W1/W2 workflow. Small: one IconButton +
@@ -98,10 +100,9 @@ Ordered by value/effort for THIS user's workflows:
    already touches the file, not as a standalone campaign.
 7. **Transaction list paging** (Paging3 or windowed LIMIT) — defer until
    the user feels lag; indices (H6, landed) push that day out.
-8. **Amount-entry ergonomics**: the manual add flow could default the
-   date to "today 12:00" and focus amount first — micro-friction that
-   matters because tap-to-pay UOB purchases must be entered manually
-   (cashback tracker accuracy depends on the user actually doing it).
+8. ~~Amount-entry ergonomics~~ **DONE 2026-07-08** (amount field
+   auto-focuses with keyboard on a fresh add; date already defaults to
+   now). Remaining micro-item if ever needed: date "today 12:00".
 
 ## Positives (do not "fix")
 
