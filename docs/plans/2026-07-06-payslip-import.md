@@ -83,6 +83,18 @@ the UOB cashback plan's cycle engine (T-C2) is the same window abstraction
       abstraction with the UOB cycle engine): user-set month start day for
       Home/Analytics aggregations so end-of-month salary pairs with the
       month it funds. View-layer only — never shifts transaction dates.
+      **Scoping done 2026-07-08** — month-window sites that must all
+      honor the setting (grep `withDayOfMonth(1)`): `HomeViewModel` lines
+      ~322/425/448/477/514/533/1058 (current-month spend, income, last
+      month comparison) and `AnalyticsViewModel` ~506/526–528 (trend
+      month loop); check budget aggregation too. Plan of attack: (1) pure
+      `FinancialMonth(startDay)` domain class + JVM tests (window-for-date,
+      clamping in short months — reuse UobCashbackEngine.windowFor
+      semantics), (2) DataStore pref `financialMonthStartDay` default 1,
+      (3) replace each site with the abstraction, (4) label windows in
+      the UI ("25 Jun – 24 Jul") so the user sees which month they're in.
+      Do this EARLY in a session — it touches every money-aggregation
+      path and needs the full regression suite + an on-device sanity pass.
 
 ## Fixture source (T-P1 — COLLECTED 2026-07-06; extraction tool added 2026-07-07)
 

@@ -63,11 +63,11 @@ statement line. Harmless for cycle assignment (month-end is mid-window).
 
 ## Open questions for the user — 待用户确认
 
-1. **Maxis 金额**：你说每月固定 RM83.90，但三份账单上 `MAXIS-AUTO` 是
-   53.90/53.75/53.75。是套餐改了价，还是 RM83.90 里含另一条不走 UOB 卡的
-   线路/账单？订阅先按 53.75 建，确认后改金额即可。
-2. **Grab subscription RM23.90**：不在 UOB 账单上——从哪里扣
-   （GrabPay 余额？别的卡？）？知道渠道才能决定自动化方式。
+1. ~~**Maxis 金额**~~ **RESOLVED 2026-07-08**：卡扣 53.75/53.90，差额是
+   RM30 走 Ryt 付（做任务）；订阅按 53.75 建 ✅（用户已建好三条订阅）。
+2. **Grab subscription RM23.90**：2026-06-20 才开始，所以不在前三份
+   账单上。17 JUL 结算的下一份账单会揭晓它是否扣 UOB 卡——届时跑
+   PDF Text Debug 把账单文本给 AI。
 3. **Great Eastern / Coway / Maxis 扣款时 UOB 完全无 SMS** —— 已按账单
    证据认定成立；若某月真的收到 UOB SMS，请关掉该订阅的 Auto-record
    （否则重复记账）。
