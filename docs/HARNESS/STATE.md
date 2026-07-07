@@ -36,6 +36,17 @@ building new pipeline-dependent features.
 
 ## Open items (unblocked)
 
+- **Fifteenth batch DONE 2026-07-07** (user-reported incident): notification
+  capture had been silently dead since ~4 Jul (Android's post-APK-update
+  listener unbind bug — LESSONS entry added). (26) MainActivity nudges
+  `NotificationListenerService.requestRebind` on every foreground; (27)
+  Notification Log shows a live listener status banner (green connected /
+  red with tap-to-open-settings). On-device: install the new APK, open the
+  app once, banner should go green and new notifications resume; if the
+  user's missed "TNG Transferred to" notification STILL doesn't parse once
+  logging resumes, copy its body from the log — may be an unseen TNG
+  notification format (parser fix needs the real text).
+
 - **Fourteenth batch DONE 2026-07-07** (三份真实 UOB 账单 APR/MAY/JUN 驱动;
   plan: `docs/plans/2026-07-07-recurring-autodebits.md`):
   (23) **UOB engine calibrated** — rounding DOWN→HALF_UP + APR

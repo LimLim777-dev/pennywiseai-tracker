@@ -39,9 +39,55 @@ class BankNotificationListenerService : NotificationListenerService() {
 
     companion object {
         private const val TAG = "BankNotificationListener"
+
+        /**
+         * True while the system has this listener bound. Android routinely
+         * fails to rebind notification listeners after an APK update (until
+         * a reboot or an access toggle) — observed 2026-07-07 as a silent
+         * multi-day capture gap. Surfaced on the Notification Log screen so
+         * the gap is visible instead of silent.
+         */
+        @Volatile
+        var isConnected: Boolean = false
+            private set
+
+        /** Whether the user has granted notification access to this app. */
+        fun hasNotificationAccess(context: android.content.Context): Boolean =
+            androidx.core.app.NotificationManagerCompat
+                .getEnabledListenerPackages(context)
+                .contains(context.packageName)
+
+        /**
+         * Nudge the system to rebind the listener. Safe to call on every app
+         * foreground: no-op when access isn't granted, and rebinding an
+         * already-bound listener is harmless. This is the canonical
+         * workaround for the post-update unbind bug.
+         */
+        fun requestRebindIfPermitted(context: android.content.Context) {
+            if (!hasNotificationAccess(context)) return
+            try {
+                requestRebind(
+                    android.content.ComponentName(context, BankNotificationListenerService::class.java)
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "requestRebind failed", e)
+            }
+        }
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        isConnected = true
+        Log.i(TAG, "Notification listener connected")
+    }
+
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        isConnected = false
+        Log.w(TAG, "Notification listener disconnected")
+    }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         val packageName = sbn.packageName ?: return

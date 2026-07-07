@@ -56,6 +56,16 @@ class MainActivity : FragmentActivity() {
         handleEditIntent(intent)
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Android often leaves the notification listener unbound after an APK
+        // update until a reboot/access toggle — every bank-app notification is
+        // silently dropped meanwhile. Nudging a rebind on each foreground is
+        // the canonical workaround (no-op when already bound or not granted).
+        com.pennywiseai.tracker.receiver.BankNotificationListenerService
+            .requestRebindIfPermitted(this)
+    }
+
     private fun handleEditIntent(intent: Intent?) {
         if (intent?.action == SmsBroadcastReceiver.ACTION_EDIT_TRANSACTION) {
             val transactionId = intent.getLongExtra(SmsBroadcastReceiver.EXTRA_TRANSACTION_ID, -1)

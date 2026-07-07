@@ -1,5 +1,8 @@
 package com.pennywiseai.tracker.ui.screens.notificationlog
 
+import android.content.Intent
+import android.provider.Settings
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -11,14 +14,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.pennywiseai.tracker.data.database.entity.BankNotificationEntity
+import com.pennywiseai.tracker.receiver.BankNotificationListenerService
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,28 +49,88 @@ fun NotificationLogScreen(
             )
         }
     ) { padding ->
-        if (notifications.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "No notifications received yet",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                itemsIndexed(notifications.reversed()) { _, item ->
-                    NotificationLogCard(item)
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            ListenerStatusBanner()
+            if (notifications.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No notifications received yet",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    itemsIndexed(notifications.reversed()) { _, item ->
+                        NotificationLogCard(item)
+                    }
                 }
             }
         }
+    }
+}
+
+/**
+ * Surfaces the listener's live bind state. Android routinely leaves
+ * notification listeners unbound after an APK update — every bank
+ * notification is silently dropped until a rebind. Green = capturing;
+ * red = fix it now (tap opens the system Notification access screen).
+ */
+@Composable
+private fun ListenerStatusBanner() {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var hasAccess by remember { mutableStateOf(BankNotificationListenerService.hasNotificationAccess(context)) }
+    var connected by remember { mutableStateOf(BankNotificationListenerService.isConnected) }
+    // Nudge a rebind and keep polling while this screen is visible, so the
+    // banner flips green once the rebind lands (and re-checks after the user
+    // returns from the system settings toggle).
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            BankNotificationListenerService.requestRebindIfPermitted(context)
+            while (true) {
+                hasAccess = BankNotificationListenerService.hasNotificationAccess(context)
+                connected = BankNotificationListenerService.isConnected
+                delay(1_000)
+            }
+        }
+    }
+    val (text, isError) = when {
+        !hasAccess -> "Notification access NOT granted — bank app notifications are not captured. Tap to open settings." to true
+        !connected -> "Listener not connected (common after app updates) — reconnecting… If this stays red, toggle Notification access off/on in settings or reboot. Tap to open settings." to true
+        else -> "Listener connected — capturing bank notifications." to false
+    }
+    val openSettings = {
+        context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+    }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .then(if (isError) Modifier.clickable { openSettings() } else Modifier),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isError)
+                MaterialTheme.colorScheme.errorContainer
+            else
+                MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (isError)
+                MaterialTheme.colorScheme.onErrorContainer
+            else
+                MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.padding(12.dp)
+        )
     }
 }
 
