@@ -862,14 +862,20 @@ class TransactionDetailViewModel @Inject constructor(
                     // nextPaymentDate and regenerate. Must run AFTER the delete: the soft
                     // delete frees the idempotency hash — run before it, the regeneration
                     // dedups against the not-yet-deleted row and same-day income is lost.
+                    // INCOME only: deleting an auto-generated EXPENSE means "this
+                    // auto-debit didn't happen this cycle" — rewinding would
+                    // resurrect, dated today, the charge the user just removed.
                     txn.transactionHash.takeIf { it.startsWith("autopay-") }?.let { hash ->
                         val parts = hash.removePrefix("autopay-").split("-")
                         parts.firstOrNull()?.toLongOrNull()?.let { subId ->
-                            subscriptionRepository.updateNextPaymentDate(
-                                subId,
-                                java.time.LocalDate.now()
-                            )
-                            generateIncomeAutopayUseCase.execute()
+                            val sub = subscriptionRepository.getSubscriptionById(subId)
+                            if (sub?.direction == com.pennywiseai.tracker.data.database.entity.SubscriptionDirection.INCOME) {
+                                subscriptionRepository.updateNextPaymentDate(
+                                    subId,
+                                    java.time.LocalDate.now()
+                                )
+                                generateIncomeAutopayUseCase.execute()
+                            }
                         }
                     }
                     if (bank != null && acct != null) {

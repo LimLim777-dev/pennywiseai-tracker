@@ -36,6 +36,26 @@ building new pipeline-dependent features.
 
 ## Open items (unblocked)
 
+- **Fourteenth batch DONE 2026-07-07** (三份真实 UOB 账单 APR/MAY/JUN 驱动;
+  plan: `docs/plans/2026-07-07-recurring-autodebits.md`):
+  (23) **UOB engine calibrated** — rounding DOWN→HALF_UP + APR
+  below-threshold statement pinned as a five-line acceptance fixture;
+  settled: GREATEASTERN insurance COUNTS toward min spend/Others rebate
+  (no exclusion needed); May "Others 1.08" in the plan doc was a typo
+  (1.09). (24) **TimeParser landed** — Time Internet receipt (sender
+  62003) → EXPENSE, bankName deliberately "UOB" (bill auto-charges the
+  card, amount varies; keeps cashback min-spend honest); real masked
+  fixture test + alias pinned. (25) **Expense-direction autopay** —
+  schema **v58** (additive `subscriptions.auto_generate`, AutoMigration
+  57→58, 58.json exported): EXPENSE subscriptions with the new
+  "Auto-record on schedule" switch + optional "Charged to bank" field are
+  phantom-created by the existing autopay creator (idempotent hashes);
+  delete-rewind gated to INCOME only (deleting an auto-debit phantom must
+  NOT resurrect it). User setup table + open questions (Maxis 83.90 vs
+  statement 53.75; where Grab RM23.90 charges) in the plan doc. All app +
+  parser-core tests green (only the documented pre-existing
+  MalaysianParsersTest 7 remain red).
+
 - ~~T0.1 commit discipline~~ **DONE 2026-07-07** (user-authorized "你处理吧"):
   entire tree committed in 6 logical commits (harness+docs / TNG channel /
   MAE daily-income / pipeline fixes+v56 / UOB engine / pre-harness WIP

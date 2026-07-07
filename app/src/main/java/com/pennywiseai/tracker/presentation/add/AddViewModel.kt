@@ -350,6 +350,19 @@ class AddViewModel @Inject constructor(
             currentState.copy(direction = direction)
         }
     }
+
+    /**
+     * EXPENSE-direction opt-in: auto-record the scheduled transaction (for
+     * auto-debits that emit no SMS/notification).
+     */
+    fun updateSubscriptionAutoGenerate(autoGenerate: Boolean) {
+        _subscriptionUiState.update { it.copy(autoGenerate = autoGenerate) }
+    }
+
+    /** Bank the auto-debit charges (optional; e.g. "UOB" for card debits). */
+    fun updateSubscriptionBankName(bankName: String) {
+        _subscriptionUiState.update { it.copy(bankName = bankName) }
+    }
     
     fun updateSubscriptionNextPaymentDate(dateMillis: Long) {
         val instant = Instant.ofEpochMilli(dateMillis)
@@ -424,7 +437,13 @@ class AddViewModel @Inject constructor(
                     paymentReminder = false, // Not implemented yet
                     notes = state.notes.takeIf { it.isNotBlank() },
                     currency = state.currency,
-                    direction = state.direction
+                    direction = state.direction,
+                    // Auto-generation is an EXPENSE-direction opt-in; INCOME
+                    // always auto-generates regardless of this flag.
+                    autoGenerate = state.direction ==
+                        com.pennywiseai.tracker.data.database.entity.SubscriptionDirection.EXPENSE &&
+                        state.autoGenerate,
+                    bankName = state.bankName.takeIf { it.isNotBlank() }
                 )
                 
                 Log.d("AddViewModel", "Subscription saved successfully with ID: $subscriptionId")
@@ -527,7 +546,14 @@ data class SubscriptionUiState(
      * incoming bank-debit SMS as today.
      */
     val direction: com.pennywiseai.tracker.data.database.entity.SubscriptionDirection =
-        com.pennywiseai.tracker.data.database.entity.SubscriptionDirection.EXPENSE
+        com.pennywiseai.tracker.data.database.entity.SubscriptionDirection.EXPENSE,
+    /**
+     * EXPENSE-direction opt-in: auto-record the scheduled transaction on
+     * each due date, for auto-debits that emit no SMS/notification.
+     */
+    val autoGenerate: Boolean = false,
+    /** Bank the auto-debit charges (optional; feeds bank-level trackers). */
+    val bankName: String = ""
 ) {
     val isValid: Boolean
         get() = serviceName.isNotBlank() &&

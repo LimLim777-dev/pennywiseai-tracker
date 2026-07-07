@@ -144,13 +144,64 @@ fun SubscriptionTabContent(
                         modifier = Modifier.size(Dimensions.Icon.medium)
                     )
                     Text(
-                        text = if (isIncome)
-                            "Track recurring income (wallet top-ups, allowance). A transaction is auto-created on each scheduled date."
-                        else
-                            "Track recurring expenses. You'll need to add transactions manually each month.",
+                        text = when {
+                            isIncome ->
+                                "Track recurring income (wallet top-ups, allowance). A transaction is auto-created on each scheduled date."
+                            uiState.autoGenerate ->
+                                "A transaction is auto-created on each scheduled date. Use ONLY for auto-debits that send no SMS/notification — otherwise it double-records."
+                            else ->
+                                "Track recurring expenses. Incoming bank SMS mark them as paid automatically."
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
+                }
+            }
+
+            // EXPENSE-direction opt-in: phantom-record silent auto-debits
+            // (card-charged insurance/telco with no SMS). Hidden for INCOME,
+            // which always auto-generates.
+            if (!isIncome) {
+                PennyWiseCardV2(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = 12.dp
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Auto-record on schedule",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "For auto-debits with no SMS/notification",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = uiState.autoGenerate,
+                                onCheckedChange = viewModel::updateSubscriptionAutoGenerate
+                            )
+                        }
+                        if (uiState.autoGenerate) {
+                            TextField(
+                                value = uiState.bankName,
+                                onValueChange = viewModel::updateSubscriptionBankName,
+                                label = { Text("Charged to bank (optional)", fontWeight = FontWeight.SemiBold) },
+                                supportingText = { Text("e.g. UOB — makes it count in that card's cashback tracker") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = subFullShape,
+                                leadingIcon = { Icon(Icons.Default.AccountBalance, contentDescription = null) },
+                                colors = subFilledColors()
+                            )
+                        }
+                    }
                 }
             }
 

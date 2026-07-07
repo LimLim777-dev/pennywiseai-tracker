@@ -23,7 +23,9 @@ class AddSubscriptionUseCase @Inject constructor(
         paymentReminder: Boolean = true,
         notes: String? = null,
         currency: String = "INR",
-        direction: SubscriptionDirection = SubscriptionDirection.EXPENSE
+        direction: SubscriptionDirection = SubscriptionDirection.EXPENSE,
+        autoGenerate: Boolean = false,
+        bankName: String? = null
     ): Long {
         Log.d("AddSubscriptionUseCase", "Creating subscription entity...")
 
@@ -32,14 +34,18 @@ class AddSubscriptionUseCase @Inject constructor(
             amount = amount,
             nextPaymentDate = nextPaymentDate,
             state = SubscriptionState.ACTIVE, // Always active for manually added subscriptions
-            bankName = "Manual Entry",
+            // Auto-generated phantoms carry the subscription's bankName, so a
+            // user-supplied bank (e.g. the card an auto-debit charges) makes
+            // the phantom count toward that bank's trackers (UOB cashback).
+            bankName = bankName?.takeIf { it.isNotBlank() } ?: "Manual Entry",
             category = category,
             currency = currency,
             smsBody = notes, // Store user notes in smsBody field
             createdAt = LocalDateTime.now(),
             updatedAt = LocalDateTime.now(),
             direction = direction,
-            billingCycle = billingCycle
+            billingCycle = billingCycle,
+            autoGenerate = autoGenerate
         )
         
         Log.d("AddSubscriptionUseCase", "Subscription entity created: $subscription")

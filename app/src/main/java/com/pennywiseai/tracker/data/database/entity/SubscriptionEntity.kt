@@ -86,6 +86,19 @@ data class SubscriptionEntity(
     @ColumnInfo(name = "last_paid_at")
     @Contextual
     val lastPaidAt: LocalDate? = null,
+
+    /**
+     * EXPENSE-direction opt-in for the phantom auto-creator: when true, the
+     * scheduled transaction is recorded automatically on its due date — for
+     * recurring auto-debits that emit NO SMS/notification (card-charged
+     * insurance premiums, telco/water-purifier auto-billing). Must stay
+     * false for expenses that DO arrive by SMS, which are matched against
+     * the incoming message instead (auto-generating those would
+     * double-record every cycle). Ignored for INCOME direction, which
+     * always auto-generates (#371).
+     */
+    @ColumnInfo(name = "auto_generate", defaultValue = "0")
+    val autoGenerate: Boolean = false,
 )
 
 @Serializable
