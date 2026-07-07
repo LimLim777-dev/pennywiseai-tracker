@@ -145,6 +145,7 @@ object BankParserFactory {
         TNGEWalletParser(),
         RytBankParser(),
         UOBCardParser(),
+        TimeParser(),  // Time Internet receipts — bill auto-charged to the UOB card
         ShopeepayParser()
         // Add more bank parsers here as we implement them
     )

@@ -29,6 +29,9 @@ class MalaysianAliasResolutionTest {
         // UOB credit-card SMS sender ids
         "67425" to "UOB",
         "66300" to "UOB",
+        // Time Internet receipt shortcode — TimeParser records the payment
+        // against the UOB card the bill auto-charges (see TimeParser KDoc)
+        "62003" to "UOB",
     )
 
     @TestFactory
