@@ -241,7 +241,10 @@ fun PennyWiseNavHost(
             popExitTransition = { fadeOut(tween(200)) + slideOutVertically { it / 4 } }
         ) {
             com.pennywiseai.tracker.ui.screens.uob.UobCashbackScreen(
-                onNavigateBack = { navController.safePopBackStack() }
+                onNavigateBack = { navController.safePopBackStack() },
+                onAddTransaction = {
+                    navController.navigate(AddTransaction()) { launchSingleTop = true }
+                }
             )
         }
         

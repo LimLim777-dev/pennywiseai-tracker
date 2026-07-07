@@ -688,11 +688,14 @@ class BackupImporter @Inject constructor(
         // actually carries values — an older backup without this section must
         // not wipe the current device's state.
         val accountUi = preferences.accountUi
-        if (accountUi.hiddenAccounts.isNotEmpty() || accountUi.deletedSystemTemplates.isNotEmpty()) {
+        if (accountUi.hiddenAccounts.isNotEmpty() || accountUi.deletedSystemTemplates.isNotEmpty() ||
+            accountUi.uobCategoryOverrides.isNotEmpty()
+        ) {
             context.getSharedPreferences("account_prefs", android.content.Context.MODE_PRIVATE)
                 .edit()
                 .putStringSet("hidden_accounts", accountUi.hiddenAccounts.toSet())
                 .putStringSet("deleted_system_templates", accountUi.deletedSystemTemplates.toSet())
+                .putStringSet("uob_category_overrides", accountUi.uobCategoryOverrides.toSet())
                 .apply()
         }
     }

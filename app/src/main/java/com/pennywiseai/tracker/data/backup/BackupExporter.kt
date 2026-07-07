@@ -205,6 +205,8 @@ class BackupExporter @Inject constructor(
                         hiddenAccounts = accountPrefs.getStringSet("hidden_accounts", emptySet())
                             .orEmpty().toList().sorted(),
                         deletedSystemTemplates = accountPrefs.getStringSet("deleted_system_templates", emptySet())
+                            .orEmpty().toList().sorted(),
+                        uobCategoryOverrides = accountPrefs.getStringSet("uob_category_overrides", emptySet())
                             .orEmpty().toList().sorted()
                     )
                 }

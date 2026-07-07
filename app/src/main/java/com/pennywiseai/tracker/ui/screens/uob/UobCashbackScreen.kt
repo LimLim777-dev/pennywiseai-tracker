@@ -1,5 +1,6 @@
 package com.pennywiseai.tracker.ui.screens.uob
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -23,10 +24,12 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun UobCashbackScreen(
     onNavigateBack: () -> Unit,
+    onAddTransaction: () -> Unit = {},
     viewModel: UobCashbackViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val result = state.result
+    var reassignTarget by remember { mutableStateOf<UobMerchantSpend?>(null) }
 
     Scaffold(
         topBar = {
@@ -114,7 +117,14 @@ fun UobCashbackScreen(
             // ── Per-category rebates ──
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    result.categories.forEach { CategoryRow(it, result.thresholdMet) }
+                    result.categories.forEach { cat ->
+                        CategoryRow(
+                            cat = cat,
+                            thresholdMet = result.thresholdMet,
+                            merchants = state.merchantsByCategory[cat.category].orEmpty(),
+                            onMerchantClick = { reassignTarget = it }
+                        )
+                    }
                     HorizontalDivider()
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -134,24 +144,62 @@ fun UobCashbackScreen(
             Text(
                 "Captured transactions only (${state.capturedTxnCount}) — UOB tap-to-pay " +
                     "purchases send no SMS and must be added manually. Categories are " +
-                    "inferred from merchant names; posting dates are estimated (+2 days).",
+                    "inferred from merchant names; posting dates are estimated (+2 days). " +
+                    "Tap a category to see its merchants and reassign any that are wrong.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            OutlinedButton(
+                onClick = onAddTransaction,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Record a tap-to-pay purchase")
+            }
         }
+    }
+
+    reassignTarget?.let { target ->
+        ReassignCategoryDialog(
+            target = target,
+            onDismiss = { reassignTarget = null },
+            onReassign = { category ->
+                viewModel.reassign(target.merchant, category)
+                reassignTarget = null
+            },
+            onClearOverride = {
+                viewModel.clearOverride(target.merchant)
+                reassignTarget = null
+            }
+        )
     }
 }
 
+private fun categoryLabel(category: UobRebateCategory): String = when (category) {
+    UobRebateCategory.PETROL -> "Petrol"
+    UobRebateCategory.GROCERIES -> "Groceries"
+    UobRebateCategory.DINING -> "Dining"
+    UobRebateCategory.GRAB -> "Grab"
+    UobRebateCategory.OTHERS -> "Other spend"
+}
+
 @Composable
-private fun CategoryRow(cat: UobCategoryResult, thresholdMet: Boolean) {
-    val label = when (cat.category) {
-        UobRebateCategory.PETROL -> "Petrol"
-        UobRebateCategory.GROCERIES -> "Groceries"
-        UobRebateCategory.DINING -> "Dining"
-        UobRebateCategory.GRAB -> "Grab"
-        UobRebateCategory.OTHERS -> "Other spend"
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+private fun CategoryRow(
+    cat: UobCategoryResult,
+    thresholdMet: Boolean,
+    merchants: List<UobMerchantSpend>,
+    onMerchantClick: (UobMerchantSpend) -> Unit,
+) {
+    val label = categoryLabel(cat.category)
+    var expanded by remember { mutableStateOf(false) }
+    Column(
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier.then(
+            if (merchants.isNotEmpty())
+                Modifier.clickable { expanded = !expanded }
+            else Modifier
+        )
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -177,5 +225,76 @@ private fun CategoryRow(cat: UobCategoryResult, thresholdMet: Boolean) {
             color = if (cat.capped) MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (expanded) {
+            merchants.forEach { merchant ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onMerchantClick(merchant) }
+                        .padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        merchant.merchant + if (merchant.overridden) " 📌" else "",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        CurrencyFormatter.formatCurrency(merchant.spend, "MYR"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
+}
+
+@Composable
+private fun ReassignCategoryDialog(
+    target: UobMerchantSpend,
+    onDismiss: () -> Unit,
+    onReassign: (UobRebateCategory) -> Unit,
+    onClearOverride: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(target.merchant, style = MaterialTheme.typography.titleMedium) },
+        text = {
+            Column {
+                Text(
+                    "Pick the rebate category UOB actually credits this merchant under. " +
+                        "The pin applies to every cycle.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                UobRebateCategory.values().forEach { category ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onReassign(category) }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = category == target.category,
+                            onClick = { onReassign(category) }
+                        )
+                        Text(categoryLabel(category))
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            Row {
+                if (target.overridden) {
+                    TextButton(onClick = onClearOverride) { Text("Remove pin") }
+                }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
+        }
+    )
 }

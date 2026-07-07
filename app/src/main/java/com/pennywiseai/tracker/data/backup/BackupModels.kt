@@ -255,7 +255,10 @@ data class AccountUiPreferences(
     val hiddenAccounts: List<String> = emptyList(),
 
     @SerialName("deleted_system_templates")
-    val deletedSystemTemplates: List<String> = emptyList()
+    val deletedSystemTemplates: List<String> = emptyList(),
+
+    @SerialName("uob_category_overrides")
+    val uobCategoryOverrides: List<String> = emptyList()
 )
 
 @Serializable

@@ -36,6 +36,20 @@ building new pipeline-dependent features.
 
 ## Open items (unblocked)
 
+- **Nineteenth batch DONE 2026-07-08** (T-C4): (34) **UOB cashback
+  merchant reassignment** — tap a category on the Cashback screen to
+  expand its cycle merchants (spend-sorted); tap a merchant → dialog
+  pins it to the category UOB actually credits (📌 marks pinned; Remove
+  pin reverts to keyword mapping). Overrides persist in `account_prefs`
+  key `uob_category_overrides` ("MERCHANT|CATEGORY" entries) via new
+  `UobOverridesRepository`, flow-combined into the ViewModel so the
+  screen recomputes live; the key rides the backup `account_ui` section
+  (exporter+importer wired, defaulted per contract). (35) "Record a
+  tap-to-pay purchase" button on the Cashback screen → AddTransaction
+  (UOB tap-to-pay sends no SMS; prefill is a future nicety).
+  On-device: open UOB One Cashback → tap a category → reassign a
+  merchant → rebate figures shift immediately and survive app restart.
+
 - **Eighteenth batch DONE 2026-07-08** (T-I3 v1 + T-I1 code side): (32)
   **Investment bottom-nav tab landed** — nav order Home · Analytics ·
   Invest · Settings (both NORMAL and FLOATING bar styles; single
