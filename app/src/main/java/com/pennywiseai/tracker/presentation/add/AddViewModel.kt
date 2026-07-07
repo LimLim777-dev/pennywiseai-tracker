@@ -46,6 +46,14 @@ class AddViewModel @Inject constructor(
     // When launched via "Duplicate", this holds the id of the source transaction
     // whose values should pre-fill the form. Null for a fresh add.
     private val sourceTransactionId: Long? = savedStateHandle.get<Long>("sourceTransactionId")
+
+    // Contextual-shortcut prefill (e.g. Investment tab "Record dividend").
+    // Only applied on a fresh add; a Duplicate launch wins.
+    private val prefillType: String? = savedStateHandle.get<String>("prefillType")
+    private val prefillCategory: String? = savedStateHandle.get<String>("prefillCategory")
+    private val prefillMerchant: String? = savedStateHandle.get<String>("prefillMerchant")
+    private val prefillBankName: String? = savedStateHandle.get<String>("prefillBankName")
+    private val prefillAccountLast4: String? = savedStateHandle.get<String>("prefillAccountLast4")
     
     // General UI State
     private val _uiState = MutableStateFlow(AddUiState())
@@ -70,6 +78,37 @@ class AddViewModel @Inject constructor(
             // If launched via "Duplicate", prefill the transaction form from the
             // source. Done after the default currency so the source's currency wins.
             sourceTransactionId?.let { prefillFromTransaction(it) }
+            if (sourceTransactionId == null) applyContextPrefill()
+        }
+    }
+
+    /** Applies contextual-shortcut nav args to a fresh transaction form. */
+    private fun applyContextPrefill() {
+        val type = prefillType?.let { name ->
+            runCatching { TransactionType.valueOf(name) }.getOrNull()
+        }
+        if (type == null && prefillCategory == null && prefillMerchant == null &&
+            prefillBankName == null
+        ) return
+
+        _transactionUiState.update { state ->
+            state.copy(
+                transactionType = type ?: state.transactionType,
+                category = prefillCategory ?: state.category,
+                merchant = prefillMerchant ?: state.merchant,
+            )
+        }
+        if (prefillBankName != null) {
+            viewModelScope.launch {
+                val matched = accounts.first { it.isNotEmpty() }
+                    .firstOrNull {
+                        it.bankName == prefillBankName &&
+                            (prefillAccountLast4 == null || it.accountLast4 == prefillAccountLast4)
+                    } ?: return@launch
+                _transactionUiState.update { state ->
+                    if (state.selectedAccount == null) state.copy(selectedAccount = matched) else state
+                }
+            }
         }
     }
 

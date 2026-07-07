@@ -36,6 +36,17 @@ building new pipeline-dependent features.
 
 ## Open items (unblocked)
 
+- **Twentieth batch DONE 2026-07-08** (T-I4): (36) **"Record dividend"
+  on every Investment-tab account card** → AddTransaction pre-filled
+  (INCOME / category "Dividends" / merchant + account = the platform)
+  via new optional prefill nav args on the typed AddTransaction route
+  (prefillType/Category/Merchant/BankName/AccountLast4, all defaulted —
+  existing callers unaffected; Duplicate launch wins over prefill).
+  Reminder from the plan: EPF/ASNB dividends that compound INSIDE the
+  platform are a snapshot bump, NOT income — use this button only for
+  cash payouts. On-device: Invest tab → Record dividend → form arrives
+  pre-filled, save → INCOME row on the platform account.
+
 - **Nineteenth batch DONE 2026-07-08** (T-C4): (34) **UOB cashback
   merchant reassignment** — tap a category on the Cashback screen to
   expand its cycle merchants (spend-sorted); tap a merchant → dialog

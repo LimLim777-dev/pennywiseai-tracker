@@ -33,8 +33,18 @@ object Chat
 @Serializable
 data class TransactionDetail(val transactionId: Long)
 
+// Optional prefill fields (all defaulted — callers pass only what they know):
+// used by contextual shortcuts like the Investment tab's "Record dividend".
+// Property names are the AddViewModel SavedStateHandle keys.
 @Serializable
-data class AddTransaction(val sourceTransactionId: Long? = null)
+data class AddTransaction(
+    val sourceTransactionId: Long? = null,
+    val prefillType: String? = null,
+    val prefillCategory: String? = null,
+    val prefillMerchant: String? = null,
+    val prefillBankName: String? = null,
+    val prefillAccountLast4: String? = null,
+)
 
 @Serializable
 data class AccountDetail(val bankName: String, val accountLast4: String)

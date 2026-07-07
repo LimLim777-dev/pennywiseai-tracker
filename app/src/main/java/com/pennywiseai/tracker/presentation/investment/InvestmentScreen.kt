@@ -28,6 +28,7 @@ import java.math.BigDecimal
 fun InvestmentScreen(
     onNavigateToManageAccounts: () -> Unit,
     onAccountClick: (bankName: String, accountLast4: String) -> Unit,
+    onRecordDividend: (bankName: String, accountLast4: String) -> Unit = { _, _ -> },
     viewModel: InvestmentViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -98,7 +99,8 @@ fun InvestmentScreen(
             items(state.rows, key = { "${it.bankName}|${it.accountLast4}|${it.currency}" }) { row ->
                 InvestmentAccountCard(
                     row = row,
-                    onClick = { onAccountClick(row.bankName, row.accountLast4) }
+                    onClick = { onAccountClick(row.bankName, row.accountLast4) },
+                    onRecordDividend = { onRecordDividend(row.bankName, row.accountLast4) }
                 )
             }
 
@@ -115,7 +117,11 @@ fun InvestmentScreen(
 }
 
 @Composable
-private fun InvestmentAccountCard(row: InvestmentRow, onClick: () -> Unit) {
+private fun InvestmentAccountCard(
+    row: InvestmentRow,
+    onClick: () -> Unit,
+    onRecordDividend: () -> Unit,
+) {
     Card(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -163,11 +169,20 @@ private fun InvestmentAccountCard(row: InvestmentRow, onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Text(
-                "Tap for value history",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Tap for value history",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                TextButton(onClick = onRecordDividend) {
+                    Text("Record dividend", style = MaterialTheme.typography.labelMedium)
+                }
+            }
         }
     }
 }

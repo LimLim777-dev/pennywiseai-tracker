@@ -378,6 +378,17 @@ fun MainScreen(
                                 rootNavController?.navigate(
                                     com.pennywiseai.tracker.navigation.BalanceHistory(bankName, accountLast4)
                                 ) { launchSingleTop = true }
+                            },
+                            onRecordDividend = { bankName, accountLast4 ->
+                                rootNavController?.navigate(
+                                    com.pennywiseai.tracker.navigation.AddTransaction(
+                                        prefillType = "INCOME",
+                                        prefillCategory = "Dividends",
+                                        prefillMerchant = bankName,
+                                        prefillBankName = bankName,
+                                        prefillAccountLast4 = accountLast4,
+                                    )
+                                ) { launchSingleTop = true }
                             }
                         )
                     }
