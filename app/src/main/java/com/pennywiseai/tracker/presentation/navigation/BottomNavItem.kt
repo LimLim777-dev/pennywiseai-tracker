@@ -1,6 +1,7 @@
 package com.pennywiseai.tracker.presentation.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
@@ -21,6 +22,12 @@ sealed class BottomNavItem(
         route = "analytics",
         title = "Analytics",
         icon = Icons.Default.Analytics
+    )
+
+    data object Investment : BottomNavItem(
+        route = "investment",
+        title = "Invest",
+        icon = Icons.AutoMirrored.Filled.TrendingUp
     )
 
     data object Settings : BottomNavItem(

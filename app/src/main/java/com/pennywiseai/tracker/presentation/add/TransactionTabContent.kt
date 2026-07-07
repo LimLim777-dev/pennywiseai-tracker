@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.*
@@ -355,6 +356,7 @@ fun TransactionTabContent(
                                 AccountType.CASH -> Icons.Default.Money
                                 AccountType.CREDIT -> Icons.Default.CreditCard
                                 AccountType.WALLET -> Icons.Default.Wallet
+                                AccountType.INVESTMENT -> Icons.AutoMirrored.Filled.TrendingUp
                                 AccountType.SAVINGS, AccountType.CURRENT -> Icons.Default.AccountBalance
                                 null -> Icons.Default.AccountBalance
                             },

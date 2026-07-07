@@ -366,6 +366,24 @@ fun MainScreen(
                 )
 
                 composable(
+                    route = "investment",
+                    content = { _: NavBackStackEntry ->
+                        com.pennywiseai.tracker.presentation.investment.InvestmentScreen(
+                            onNavigateToManageAccounts = {
+                                rootNavController?.navigate(
+                                    com.pennywiseai.tracker.navigation.ManageAccounts
+                                ) { launchSingleTop = true }
+                            },
+                            onAccountClick = { bankName, accountLast4 ->
+                                rootNavController?.navigate(
+                                    com.pennywiseai.tracker.navigation.BalanceHistory(bankName, accountLast4)
+                                ) { launchSingleTop = true }
+                            }
+                        )
+                    }
+                )
+
+                composable(
                     route = "chat",
                     content = { _: NavBackStackEntry ->
                         com.pennywiseai.tracker.ui.screens.chat.ChatScreen(
@@ -462,7 +480,7 @@ fun MainScreen(
             }
 
             // Bottom navigation OVERLAID on content
-            if (baseRoute in listOf("home", "analytics", "settings")) {
+            if (baseRoute in listOf("home", "analytics", "investment", "settings")) {
                 PennyWiseBottomNavigation(
                     navController = navController,
                     currentDestination = navBackStackEntry?.destination,

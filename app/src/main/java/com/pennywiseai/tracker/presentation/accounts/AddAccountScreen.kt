@@ -10,6 +10,7 @@ import com.pennywiseai.tracker.ui.effects.overScrollVertical
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -160,6 +161,7 @@ fun AddAccountScreen(
                         AccountType.CREDIT -> "Credit Card"
                         AccountType.CASH -> "Cash"
                         AccountType.WALLET -> "E-Wallet"
+                        AccountType.INVESTMENT -> "Investment"
                     },
                     onValueChange = {},
                     readOnly = true,
@@ -175,6 +177,7 @@ fun AddAccountScreen(
                                 AccountType.CREDIT -> Icons.Default.CreditCard
                                 AccountType.CASH -> Icons.Default.Money
                                 AccountType.WALLET -> Icons.Default.Wallet
+                                AccountType.INVESTMENT -> Icons.AutoMirrored.Filled.TrendingUp
                             },
                             contentDescription = null
                         )
@@ -196,6 +199,7 @@ fun AddAccountScreen(
                                     AccountType.CREDIT -> "Credit Card"
                                     AccountType.CASH -> "Cash"
                                     AccountType.WALLET -> "E-Wallet"
+                                    AccountType.INVESTMENT -> "Investment"
                                 })
                             },
                             onClick = {
@@ -209,6 +213,7 @@ fun AddAccountScreen(
                                         AccountType.CREDIT -> Icons.Default.CreditCard
                                         AccountType.CASH -> Icons.Default.Money
                                         AccountType.WALLET -> Icons.Default.Wallet
+                                        AccountType.INVESTMENT -> Icons.AutoMirrored.Filled.TrendingUp
                                     },
                                     contentDescription = null
                                 )
@@ -275,7 +280,7 @@ fun AddAccountScreen(
                     onValueChange = viewModel::updateAccountLast4,
                     label = {
                         Text(
-                            if (formState.accountType == AccountType.CASH || formState.accountType == AccountType.WALLET)
+                            if (formState.accountType in NO_DIGITS_ACCOUNT_TYPES)
                                 "Identifier (Optional)" else "Last 4 Digits *",
                             fontWeight = FontWeight.SemiBold
                         )

@@ -36,6 +36,27 @@ building new pipeline-dependent features.
 
 ## Open items (unblocked)
 
+- **Eighteenth batch DONE 2026-07-08** (T-I3 v1 + T-I1 code side): (32)
+  **Investment bottom-nav tab landed** — nav order Home · Analytics ·
+  Invest · Settings (both NORMAL and FLOATING bar styles; single
+  registration, inner route "investment" per the post-M6 rule).
+  InvestmentScreen: per-account current value (latest snapshot) /
+  invested (Σ captured INVESTMENT transactions attributed by
+  bankName+currency, case-insensitive) / unrealized P&L; portfolio
+  header uses sumByCurrency+formatByCurrency (USD/MYR never merged);
+  tap → BalanceHistory; empty state → Manage Accounts. Pure builder
+  `buildInvestmentRows` pinned by 4 unit tests (incl. MooMoo USD/MYR
+  no-mixing). (33) **AccountType.INVESTMENT** added end-to-end (enum,
+  Add Account dropdown w/ TrendingUp icon, no-last4 like CASH/WALLET
+  via shared NO_DIGITS_ACCOUNT_TYPES, display name, entity mapping).
+  NOTE for the savings plan's T1.3: DeriveInterestUseCase does NOT
+  exist yet — when it's built, it MUST exclude accountType=INVESTMENT
+  (rising portfolio must not fabricate income; plan doc has the rule).
+  User setup: Accounts → + → type Investment, create RHB Trade Smart /
+  MooMoo (USD) / MooMoo (MYR) / KWSP / PMO Plus / myASNB with current
+  market values. On-device: Invest tab shows them; Update balance
+  writes a snapshot; tab totals split per currency.
+
 - **Seventeenth batch DONE 2026-07-08**: (31) **M6 dual-navigation merge
   landed** — every leaf screen is now registered ONCE, in the root typed
   NavHost; MainScreen's inner string graph keeps only the bottom-nav tabs

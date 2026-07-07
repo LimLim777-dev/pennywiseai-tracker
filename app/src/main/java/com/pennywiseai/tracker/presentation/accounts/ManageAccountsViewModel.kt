@@ -48,8 +48,15 @@ enum class AccountType {
     CURRENT,
     CREDIT,
     CASH,
-    WALLET
+    WALLET,
+    INVESTMENT
 }
+
+/**
+ * Account types with no bank account number — the last4 field is optional
+ * and defaults to the type name (cash jars, e-wallets, investment platforms).
+ */
+val NO_DIGITS_ACCOUNT_TYPES = setOf(AccountType.CASH, AccountType.WALLET, AccountType.INVESTMENT)
 
 data class PendingProfileReassign(
     val bankName: String,
@@ -158,7 +165,7 @@ class ManageAccountsViewModel @Inject constructor(
     }
     
     fun updateAccountLast4(last4: String) {
-        val isNoDigits = _formState.value.accountType == AccountType.CASH || _formState.value.accountType == AccountType.WALLET
+        val isNoDigits = _formState.value.accountType in NO_DIGITS_ACCOUNT_TYPES
         // Allow empty for CASH/WALLET, or up to 4 chars for others
         if (isNoDigits || last4.length <= 4) {
             val resolved = when {
@@ -198,7 +205,7 @@ class ManageAccountsViewModel @Inject constructor(
     }
     
     private fun validateForm(bankName: String, last4: String, balance: String, accountType: AccountType = AccountType.SAVINGS): Boolean {
-        val isNoDigits = accountType == AccountType.CASH || accountType == AccountType.WALLET
+        val isNoDigits = accountType in NO_DIGITS_ACCOUNT_TYPES
         return bankName.isNotBlank() &&
                (isNoDigits || last4.length == 4) &&
                balance.isNotBlank() &&

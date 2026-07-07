@@ -68,6 +68,7 @@ fun PennyWiseBottomNavigation(
     val navigationItems = listOf(
         BottomNavItem.Home,
         BottomNavItem.Analytics,
+        BottomNavItem.Investment,
         BottomNavItem.Settings
     )
     val containerColor = MaterialTheme.colorScheme.surface
