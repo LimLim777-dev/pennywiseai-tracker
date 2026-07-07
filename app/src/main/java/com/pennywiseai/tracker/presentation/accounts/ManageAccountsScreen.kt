@@ -806,6 +806,19 @@ private fun CreditCardItem(
                             }
                         )
                         DropdownMenuItem(
+                            text = { Text("Edit") },
+                            onClick = {
+                                showMenu = false
+                                onEditAccount()
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = null
+                                )
+                            }
+                        )
+                        DropdownMenuItem(
                             text = {
                                 Text(
                                     if (card.statementDay != null) "Statement date: ${card.statementDay}"
