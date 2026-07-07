@@ -167,7 +167,7 @@ paths where the 2026-07-06 engineering review found correctness bugs
       `app/.../domain/usecase/DeriveInterestUseCase.kt`, test alongside
       existing app tests. Zone: 🟢 new file, but touches money semantics →
       treat 🟡, show the user the test list.
-- [ ] **T1.3 Wire "Update balance" to derivation**: in the manual-account
+- [x] **T1.3 Wire "Update balance" to derivation** DONE 2026-07-08: in the manual-account
       update flow (ManageAccountsScreen → its ViewModel), when the account
       is one of the sub-account bank_names above, route through
       `DeriveInterestUseCase` with a confirm step ("RM2.15 higher than

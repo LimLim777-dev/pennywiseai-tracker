@@ -58,6 +58,26 @@ enum class AccountType {
  */
 val NO_DIGITS_ACCOUNT_TYPES = setOf(AccountType.CASH, AccountType.WALLET, AccountType.INVESTMENT)
 
+/**
+ * Interest-bearing wallet sub-products (subaccounts plan naming table).
+ * Updating one of these accounts' balance routes through interest
+ * derivation instead of silently overwriting (DOMAIN_MODEL §7).
+ */
+val SAVINGS_SUB_ACCOUNT_BANKS = setOf(
+    "Boost Jar", "GX Pocket", "Ryt Pocket", "ShopeePay Money+", "TNG GO+"
+)
+
+/**
+ * A balance observation on a savings sub-account awaiting the user's
+ * confirmation (record the delta as interest / just set the balance).
+ */
+data class PendingBalanceObservation(
+    val bankName: String,
+    val accountLast4: String,
+    val observedBalance: BigDecimal,
+    val decision: com.pennywiseai.tracker.domain.usecase.InterestDecision,
+)
+
 data class PendingProfileReassign(
     val bankName: String,
     val accountLast4: String,
@@ -73,6 +93,7 @@ class ManageAccountsViewModel @Inject constructor(
     private val transactionRepository: com.pennywiseai.tracker.data.repository.TransactionRepository,
     private val database: com.pennywiseai.tracker.data.database.PennyWiseDatabase,
     private val userPreferencesRepository: com.pennywiseai.tracker.data.preferences.UserPreferencesRepository,
+    private val deriveInterestUseCase: com.pennywiseai.tracker.domain.usecase.DeriveInterestUseCase,
     entitlementGate: com.pennywiseai.tracker.billing.EntitlementGate,
 ) : ViewModel() {
 
@@ -259,8 +280,55 @@ class ManageAccountsViewModel @Inject constructor(
         }
     }
     
+    private val _pendingObservation = MutableStateFlow<PendingBalanceObservation?>(null)
+    val pendingObservation: StateFlow<PendingBalanceObservation?> = _pendingObservation.asStateFlow()
+
     fun updateAccountBalance(bankName: String, accountLast4: String, newBalance: BigDecimal) {
         viewModelScope.launch {
+            // Interest-bearing sub-account: a balance observation means
+            // something — compare against the books and let the user confirm
+            // recording the delta as interest (DOMAIN_MODEL §7) instead of
+            // silently overwriting.
+            if (bankName in SAVINGS_SUB_ACCOUNT_BANKS &&
+                accountBalanceRepository.isManualAccount(bankName, accountLast4)
+            ) {
+                val derived = accountBalanceRepository.derivedManualBalance(bankName, accountLast4)
+                val latest = accountBalanceRepository.getLatestBalance(bankName, accountLast4)
+                if (derived != null && latest != null) {
+                    val hash = com.pennywiseai.tracker.domain.usecase.interestHash(
+                        bankName, accountLast4, java.time.LocalDate.now()
+                    )
+                    val decision = com.pennywiseai.tracker.domain.usecase.decideInterest(
+                        isManualAccount = true,
+                        accountType = latest.accountType,
+                        isCreditCard = latest.isCreditCard,
+                        derivedBalance = derived,
+                        observedBalance = newBalance,
+                        alreadyRecordedToday =
+                            transactionRepository.getTransactionByHash(hash) != null,
+                    )
+                    when (decision) {
+                        is com.pennywiseai.tracker.domain.usecase.InterestDecision.RecordInterest,
+                        is com.pennywiseai.tracker.domain.usecase.InterestDecision.Shortfall -> {
+                            _pendingObservation.value = PendingBalanceObservation(
+                                bankName, accountLast4, newBalance, decision
+                            )
+                            return@launch
+                        }
+                        com.pennywiseai.tracker.domain.usecase.InterestDecision.AlreadyRecordedToday -> {
+                            accountBalanceRepository.setManualCurrentBalance(
+                                bankName, accountLast4, newBalance
+                            )
+                            _uiState.update {
+                                it.copy(successMessage = "Balance set. Interest already recorded today — one row per day.")
+                            }
+                            return@launch
+                        }
+                        else -> { /* NoChange / NotEligible: plain set below */ }
+                    }
+                }
+            }
+
             // For a manual/cash account the balance is derived (opening + Σtxns). The
             // user types their *current* balance, so back-solve the opening (option b)
             // — future transactions still adjust from there.
@@ -298,6 +366,41 @@ class ManageAccountsViewModel @Inject constructor(
                 )
             )
         }
+    }
+
+    /** Confirm the pending observation: record the delta as interest. */
+    fun confirmRecordInterest() {
+        val pending = _pendingObservation.value ?: return
+        _pendingObservation.value = null
+        viewModelScope.launch {
+            val result = deriveInterestUseCase(
+                pending.bankName, pending.accountLast4, pending.observedBalance
+            )
+            _uiState.update {
+                it.copy(
+                    successMessage = when (result) {
+                        is com.pennywiseai.tracker.domain.usecase.InterestDecision.RecordInterest ->
+                            "Interest recorded: ${CurrencyFormatter.formatCurrency(result.amount, "MYR")}"
+                        else -> "Balance updated"
+                    }
+                )
+            }
+        }
+    }
+
+    /** Decline derivation: just set the balance (silent override). */
+    fun overrideSetBalance() {
+        val pending = _pendingObservation.value ?: return
+        _pendingObservation.value = null
+        viewModelScope.launch {
+            accountBalanceRepository.setManualCurrentBalance(
+                pending.bankName, pending.accountLast4, pending.observedBalance
+            )
+        }
+    }
+
+    fun dismissPendingObservation() {
+        _pendingObservation.value = null
     }
 
     fun updateCreditCard(bankName: String, accountLast4: String, newBalance: BigDecimal, newLimit: BigDecimal) {

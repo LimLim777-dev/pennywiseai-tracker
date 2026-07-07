@@ -36,6 +36,20 @@ building new pipeline-dependent features.
 
 ## Open items (unblocked)
 
+- **Twenty-second batch DONE 2026-07-08** (subaccounts T1.3): (39)
+  **Update-balance wired to interest derivation** for the five savings
+  sub-account bank names (`SAVINGS_SUB_ACCOUNT_BANKS`: Boost Jar /
+  GX Pocket / Ryt Pocket / ShopeePay Money+ / TNG GO+; exact-name gated
+  → zero impact on existing accounts until T1.4 seeds them). Flow:
+  typed balance ≠ books → confirm dialog — higher: "Record interest?"
+  [Record interest / Just set balance / Cancel]; lower: shortfall
+  prompt [Just set balance / Cancel], nothing fabricated; same-day
+  repeat: balance set + "one row per day" notice. **T1.4 is now the
+  next step and is USER action**: create the sub-accounts in-app
+  (Accounts → + → type Cash/Wallet with the exact bank names above,
+  current balances from the plan's Collected-data table) — then update
+  a balance after interest lands and confirm the dialog appears.
+
 - **Twenty-first batch DONE 2026-07-08** (subaccounts T1.1+T1.2): (37)
   **`DeriveInterestUseCase` landed** — pure decision core
   `decideInterest` (+`interestHash`) pinned by 8 JVM tests: positive

@@ -62,6 +62,7 @@ fun ManageAccountsScreen(
     val isProEntitled by viewModel.isProEntitled.collectAsState()
     var showUpgradeSheet by remember { mutableStateOf(false) }
     val pendingProfileReassign by viewModel.pendingProfileReassign.collectAsState()
+    val pendingObservation by viewModel.pendingObservation.collectAsState()
 
     val scrollBehaviorSmall = TopAppBarDefaults.pinnedScrollBehavior()
     val scrollBehaviorLarge = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -438,6 +439,62 @@ fun ManageAccountsScreen(
                     }
                 }
             }
+        }
+    }
+
+    // Interest-derivation confirm (savings sub-accounts, DOMAIN_MODEL §7):
+    // the typed balance differs from the books — ask before recording.
+    pendingObservation?.let { pending ->
+        val decision = pending.decision
+        when (decision) {
+            is com.pennywiseai.tracker.domain.usecase.InterestDecision.RecordInterest -> AlertDialog(
+                onDismissRequest = { viewModel.dismissPendingObservation() },
+                title = { Text("Record interest?") },
+                text = {
+                    Text(
+                        "${pending.bankName} is ${CurrencyFormatter.formatCurrency(decision.amount, "MYR")} " +
+                            "higher than the recorded transactions explain. Record the difference " +
+                            "as interest income?"
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.confirmRecordInterest() }) {
+                        Text("Record interest")
+                    }
+                },
+                dismissButton = {
+                    Row {
+                        TextButton(onClick = { viewModel.overrideSetBalance() }) {
+                            Text("Just set balance")
+                        }
+                        TextButton(onClick = { viewModel.dismissPendingObservation() }) {
+                            Text("Cancel")
+                        }
+                    }
+                }
+            )
+            is com.pennywiseai.tracker.domain.usecase.InterestDecision.Shortfall -> AlertDialog(
+                onDismissRequest = { viewModel.dismissPendingObservation() },
+                title = { Text("Balance lower than expected") },
+                text = {
+                    Text(
+                        "${pending.bankName} is ${CurrencyFormatter.formatCurrency(decision.amount, "MYR")} " +
+                            "lower than the recorded transactions explain. Add the missing " +
+                            "fee/withdrawal as a transaction, or just set the balance."
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.overrideSetBalance() }) {
+                        Text("Just set balance")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.dismissPendingObservation() }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+            else -> viewModel.dismissPendingObservation()
         }
     }
 
