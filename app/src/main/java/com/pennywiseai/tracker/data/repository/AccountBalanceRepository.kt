@@ -347,6 +347,19 @@ class AccountBalanceRepository @Inject constructor(
     }
 
     /**
+     * The balance a manual account SHOULD have from its books alone:
+     * opening + Σ(signed transactions incl. transfer legs). Null for
+     * non-manual accounts. This is the reference point interest derivation
+     * compares a real-world observation against (DeriveInterestUseCase).
+     */
+    suspend fun derivedManualBalance(bankName: String, accountLast4: String): BigDecimal? {
+        if (!isManualAccount(bankName, accountLast4)) return null
+        ensureManualOpening(bankName, accountLast4)
+        val opening = accountBalanceDao.getOpeningRow(bankName, accountLast4) ?: return null
+        return opening.balance + signedTransactionSum(bankName, accountLast4)
+    }
+
+    /**
      * Recomputes a manual account's displayed balance as opening + Σ(transactions)
      * and writes it to the single MANUAL row (refreshed to "now" so it wins as the
      * latest). Safe to call after any add / edit / delete of the account's

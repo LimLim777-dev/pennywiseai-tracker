@@ -155,13 +155,13 @@ paths where the 2026-07-06 engineering review found correctness bugs
 
 ## Phase 1 — Foundation (shared by all five wallets; 1–2 sessions)
 
-- [ ] **T1.1 DOMAIN_MODEL update** (🟡, same commit as T1.2): rewrite §1
+- [x] **T1.1 DOMAIN_MODEL update** (DONE 2026-07-08, same commit as T1.2) (🟡): rewrote §1
       edge case 3 (wallet-internal moves become TRANSFERs between own
       accounts once the sub-account exists), add §7 "Sub-accounts & interest"
       describing the table above, the derivation rule, and the granularity
       truth. Add "Daily" to §4 billing cycles (code already supports it —
       doc drift found in review D3).
-- [ ] **T1.2 `DeriveInterestUseCase`** + unit tests (pure JVM: fake
+- [x] **T1.2 `DeriveInterestUseCase`** DONE 2026-07-08 + 8 unit tests (pure JVM: fake
       repository, cases: positive delta, negative delta, zero, same-day
       idempotency, transfer-in same day not counted as interest). Files:
       `app/.../domain/usecase/DeriveInterestUseCase.kt`, test alongside

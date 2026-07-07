@@ -36,6 +36,23 @@ building new pipeline-dependent features.
 
 ## Open items (unblocked)
 
+- **Twenty-first batch DONE 2026-07-08** (subaccounts T1.1+T1.2): (37)
+  **`DeriveInterestUseCase` landed** — pure decision core
+  `decideInterest` (+`interestHash`) pinned by 8 JVM tests: positive
+  delta → one INCOME "Interest" row (idempotent hash
+  `interest-<bank>-<last4>-<date>`, same-day re-observation dropped);
+  negative delta → Shortfall surfaced, NEVER fabricated; zero → no-op;
+  same-day transfer-in can't read as interest (signed sum includes
+  transfer legs); **INVESTMENT/credit/non-manual hard-excluded** (the
+  guard the investments plan required — in place BEFORE any wiring).
+  New `AccountBalanceRepository.derivedManualBalance` public accessor.
+  (38) T1.1 DOMAIN_MODEL: new §7 (sub-accounts & derived interest,
+  granularity truth), §1 edge case 3 rewritten (wallet-internal moves
+  become TRANSFERs once the sub-account exists, sample-gated). NOT yet
+  wired to any UI — **next step is T1.3** (route Update-balance for the
+  five sub-account bank names through the use case with a confirm step)
+  + T1.4 (user seeds the sub-accounts in-app).
+
 - **Twentieth batch DONE 2026-07-08** (T-I4): (36) **"Record dividend"
   on every Investment-tab account card** → AddTransaction pre-filled
   (INCOME / category "Dividends" / merchant + account = the platform)

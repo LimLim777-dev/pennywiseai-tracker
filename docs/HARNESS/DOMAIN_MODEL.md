@@ -85,8 +85,11 @@ split) → soft-deleted at most.
 2. **Self-transfer, name missing** (Boost incoming): app-layer reclassification
    in `BankNotificationListenerService` — if another bank logged a `TRANSFER`
    of the same amount within ±2 min, the Boost `INCOME` becomes `TRANSFER`.
-3. **Wallet-internal moves** (Boost Jar, TNG GO+, Shopee Money+): *not
-   transactions at all* — parsers must return `null`. Money never left the owner.
+3. **Wallet-internal moves** (Boost Jar, TNG GO+, Shopee Money+): while the
+   sub-product has no account row, *not transactions at all* — parsers return
+   `null` (money never left the owner). Once the sub-account EXISTS (§7), the
+   correct shape becomes a `TRANSFER` between own accounts; upgrade per
+   wallet only with a verbatim sample (subaccounts plan Phase 2).
 4. **SMS + notification for the same event**: ±2-minute same-amount same-bank
    window in the listener suppresses the duplicate.
 5. **Invisible spending** (UOB tap-to-pay, some ShopeePay): no signal exists;
@@ -228,6 +231,41 @@ Priority-ordered, user-editable condition→action rewrites applied at ingestion
 `rule_applications`. **When the user asks for "always categorize X as Y" or
 "rename this merchant", the first question is whether a Rule or a
 `MerchantMappingEntity` row can do it — a parser/code change is the last resort.**
+
+---
+
+## 7. Sub-accounts & derived interest (fork extension)
+
+**Code**: `domain/usecase/DeriveInterestUseCase.kt` (pure decision core
+`decideInterest` + `interestHash`, both JVM-tested);
+`AccountBalanceRepository.derivedManualBalance`.
+**Plan**: `docs/plans/2026-07-06-subaccounts-interest-homeloan.md`.
+
+**Definition**: interest-bearing wallet sub-products (Boost Jars, GX
+Pockets, Ryt Pocket, ShopeePay Money+, TNG GO+) are ordinary MANUAL
+accounts, keyed `(bank_name, account_last4)` per the plan's naming table
+(e.g. `Boost Jar`/`JAR1`), all `currency = "MYR"`.
+
+**Derivation rule**: a balance observation (manual update, later OCR /
+accessibility) is compared against `derived = opening + Σ(signed
+transactions incl. transfer legs)`:
+- `observed > derived` → ONE `INCOME` row, category `"Interest"`, hash
+  `interest-<bank>-<last4>-<date>` (idempotent: one per account per day;
+  a same-day re-observation is dropped), then the manual balance is
+  recomputed so books == reality.
+- `observed < derived` → **nothing is fabricated**; the shortfall is
+  surfaced for the user to resolve (missing fee/withdrawal).
+- Same-day transfers in can never read as interest — they are already in
+  the signed sum.
+
+**Hard exclusions** (`decideInterest` returns NotEligible): non-manual
+accounts, credit cards, and `account_type = INVESTMENT` — a rising
+portfolio is market movement, NEVER income (investments plan value model;
+snapshot only).
+
+**Granularity truth**: interest rows are only as fine-grained as the
+observations (weekly observation → one weekly row). Daily accrual +
+true-up is planned separately (plan T1.5) and NOT yet built.
 
 ---
 
