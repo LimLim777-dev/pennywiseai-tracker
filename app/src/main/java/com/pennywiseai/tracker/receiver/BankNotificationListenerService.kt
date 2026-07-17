@@ -73,6 +73,39 @@ class BankNotificationListenerService : NotificationListenerService() {
                 Log.e(TAG, "requestRebind failed", e)
             }
         }
+
+        /**
+         * Stronger self-heal for a listener the system has wedged (access
+         * still granted, but the service never reconnects — OEM battery
+         * managers and repeated APK updates both cause it). Flipping the
+         * component disabled→enabled forces Android to re-register the
+         * listener service; the follow-up requestRebind reconnects it.
+         * No-op when access is missing (nothing to heal) or already
+         * connected (nothing to do).
+         */
+        fun ensureListenerAlive(context: android.content.Context) {
+            if (!hasNotificationAccess(context) || isConnected) return
+            try {
+                val component = android.content.ComponentName(
+                    context, BankNotificationListenerService::class.java
+                )
+                val pm = context.packageManager
+                pm.setComponentEnabledSetting(
+                    component,
+                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    android.content.pm.PackageManager.DONT_KILL_APP
+                )
+                pm.setComponentEnabledSetting(
+                    component,
+                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    android.content.pm.PackageManager.DONT_KILL_APP
+                )
+                requestRebind(component)
+                Log.i(TAG, "Listener component toggled to force re-registration")
+            } catch (e: Exception) {
+                Log.e(TAG, "ensureListenerAlive failed", e)
+            }
+        }
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

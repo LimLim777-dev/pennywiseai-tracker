@@ -36,6 +36,23 @@ building new pipeline-dependent features.
 
 ## Open items (unblocked)
 
+- **Twenty-fourth batch DONE 2026-07-08** (user-reported: notification
+  access keeps switching itself off): (42) **stronger self-heal** —
+  `ensureListenerAlive` toggles the listener component disabled→enabled
+  (forces Android to re-register the service) + requestRebind when
+  access is granted but the listener is dead; called from MainActivity
+  onResume and (43) a new **ListenerHealthWorker** (periodic 4h): heals
+  in place, and when access is actually REVOKED posts a high-priority
+  system notification deep-linking to the Notification access screen —
+  the channel can no longer die silently between app opens. (44)
+  MainActivity asks ONCE for **battery-optimization exemption**
+  (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS; OEM battery managers are the
+  main listener killer); never re-asked after deny. Banner text now
+  mentions the battery-optimization fix. On-device: expect the standard
+  Android exemption dialog on next launch (choose Allow); if the OEM
+  keeps flipping access off, the alert notification should appear
+  within ~4h with a one-tap path to re-enable.
+
 - **Twenty-third batch DONE 2026-07-08** (frontend backlog #2+#8): (40)
   Notification Log gained a **sender FilterChip row** (All / per-app;
   shown only when >1 sender) — sample collection no longer scrolls the

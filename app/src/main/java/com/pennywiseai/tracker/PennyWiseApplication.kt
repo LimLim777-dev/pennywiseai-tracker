@@ -82,6 +82,11 @@ class PennyWiseApplication : Application(), Configuration.Provider {
         // Start screenshot observer immediately if permission is already granted.
         // Also called from Settings when the user grants permission for the first time.
         startScreenshotObserver()
+
+        // Periodic notification-capture health check: self-heals a wedged
+        // listener and alerts (system notification) when the OS has revoked
+        // Notification access — the channel must never die silently again.
+        com.pennywiseai.tracker.worker.ListenerHealthWorker.schedule(this)
     }
 
     suspend fun processLatestScreenshot(): Boolean {

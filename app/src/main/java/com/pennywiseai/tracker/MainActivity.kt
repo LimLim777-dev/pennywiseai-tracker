@@ -59,11 +59,38 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         // Android often leaves the notification listener unbound after an APK
-        // update until a reboot/access toggle — every bank-app notification is
-        // silently dropped meanwhile. Nudging a rebind on each foreground is
-        // the canonical workaround (no-op when already bound or not granted).
+        // update (and OEM battery managers wedge it in daily use) — every
+        // bank-app notification is silently dropped meanwhile. If access is
+        // granted but the listener is dead, force re-registration by toggling
+        // the component and requesting a rebind (no-op when healthy).
         com.pennywiseai.tracker.receiver.BankNotificationListenerService
-            .requestRebindIfPermitted(this)
+            .ensureListenerAlive(this)
+        requestBatteryOptimizationExemptionOnce()
+    }
+
+    /**
+     * OEM battery "optimization" is the main reason the notification listener
+     * keeps dying between app launches. Ask the system (once) to exempt the
+     * app; the user sees the standard Android allow/deny dialog. Never asked
+     * again after a deny — the Notification Log banner remains the manual path.
+     */
+    private fun requestBatteryOptimizationExemptionOnce() {
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        if (prefs.getBoolean("battery_exemption_asked", false)) return
+        val powerManager = getSystemService(POWER_SERVICE) as android.os.PowerManager
+        if (powerManager.isIgnoringBatteryOptimizations(packageName)) return
+        prefs.edit().putBoolean("battery_exemption_asked", true).apply()
+        try {
+            startActivity(
+                Intent(
+                    android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    android.net.Uri.parse("package:$packageName")
+                )
+            )
+        } catch (_: Exception) {
+            // Some OEMs block the direct request — the user can still exempt
+            // the app manually from system settings.
+        }
     }
 
     private fun handleEditIntent(intent: Intent?) {

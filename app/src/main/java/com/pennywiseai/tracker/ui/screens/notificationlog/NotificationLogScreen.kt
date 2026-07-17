@@ -139,7 +139,9 @@ private fun ListenerStatusBanner() {
         }
     }
     val (text, isError) = when {
-        !hasAccess -> "Notification access NOT granted — bank app notifications are not captured. Tap to open settings." to true
+        !hasAccess -> "Notification access NOT granted — bank app notifications are not captured. " +
+            "Tap to open settings. If it keeps switching itself off, also disable battery " +
+            "optimization for PennyWise (system settings → Battery)." to true
         !connected -> "Listener not connected (common after app updates) — reconnecting… If this stays red, toggle Notification access off/on in settings or reboot. Tap to open settings." to true
         else -> "Listener connected — capturing bank notifications." to false
     }
