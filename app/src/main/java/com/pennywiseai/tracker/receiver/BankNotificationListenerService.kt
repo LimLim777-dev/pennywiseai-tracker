@@ -202,6 +202,7 @@ class BankNotificationListenerService : NotificationListenerService() {
                             if (notificationId != null) {
                                 notificationRepository.markProcessed(notificationId, result.transactionId)
                             }
+                            notifyCaptured(result.transactionId, transactionRepository)
                             return@launch
                         }
                     }
@@ -214,14 +215,43 @@ class BankNotificationListenerService : NotificationListenerService() {
                 )
                 if (!result.success) {
                     Log.d(TAG, "Notification skipped: ${result.reason}")
-                } else if (notificationId != null) {
-                    notificationRepository.markProcessed(notificationId, result.transactionId)
+                } else {
+                    if (notificationId != null) {
+                        notificationRepository.markProcessed(notificationId, result.transactionId)
+                    }
+                    notifyCaptured(result.transactionId, transactionRepository)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to process bank notification", e)
                 BankNotificationRetryWorker.enqueue(applicationContext)
             }
         }
+    }
+
+    /**
+     * Bank-app captures deserve the same "recorded it — fix the name?"
+     * notification the SMS channel has always shown. The parser guesses
+     * merchant from the notification text, so this is the moment the user
+     * can correct it in one tap.
+     */
+    private suspend fun notifyCaptured(
+        transactionId: Long?,
+        transactionRepository: TransactionRepository,
+    ) {
+        if (transactionId == null) return
+        if (CapturedTransactionNotifier.isAppInForeground(applicationContext)) return
+        val saved = transactionRepository.getTransactionById(transactionId) ?: return
+        CapturedTransactionNotifier.show(
+            context = applicationContext,
+            transactionId = transactionId,
+            amount = saved.amount,
+            currency = saved.currency,
+            merchant = saved.merchantName,
+            type = saved.transactionType.name,
+            bankName = saved.bankName ?: "Bank",
+            category = saved.category,
+            repository = transactionRepository,
+        )
     }
 
     override fun onDestroy() {

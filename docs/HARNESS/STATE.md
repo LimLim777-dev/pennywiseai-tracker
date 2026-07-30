@@ -36,6 +36,23 @@ building new pipeline-dependent features.
 
 ## Open items (unblocked)
 
+- **Twenty-fifth batch DONE 2026-07-08** (user-reported: "bank-app
+  payments only get captured if I open PennyWise first, and I want a
+  notification to fix merchant/description"): (45) **captured-transaction
+  notification now fires on BOTH channels.** It existed only in
+  `SmsBroadcastReceiver` — bank-app notification captures (TNG, Boost,
+  MAE…) saved silently, so the user never got the one-tap correction
+  path. Extracted to `CapturedTransactionNotifier` (shared object) and
+  called from both `BankNotificationListenerService` save paths
+  (normal + Boost cross-bank reclassification), background-only as
+  before. Actions: top category · "Category…" picker · **"Edit"** →
+  opens the transaction (merchant + description are exactly what a
+  parser guesses at). Also fixes a money-rule violation: the title now
+  formats WITH currency (`RM23.90`, was a bare `23.90`).
+  NOTE the capture gap itself is the listener-death issue (batch 24) —
+  this batch makes captures visible, the previous one keeps them
+  happening.
+
 - **Twenty-fourth batch DONE 2026-07-08** (user-reported: notification
   access keeps switching itself off): (42) **stronger self-heal** —
   `ensureListenerAlive` toggles the listener component disabled→enabled
