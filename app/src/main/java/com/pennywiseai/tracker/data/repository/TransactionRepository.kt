@@ -103,6 +103,10 @@ class TransactionRepository @Inject constructor(
 
     fun getAllMerchants(): Flow<List<String>> =
         transactionDao.getAllMerchants()
+
+    /** Merchants ordered by usage — the ranking autocomplete suggestions want. */
+    fun getMerchantsByUsage(): Flow<List<String>> =
+        transactionDao.getMerchantsByUsage()
     
     suspend fun insertTransaction(transaction: TransactionEntity): Long =
         transactionDao.insertTransaction(transaction)

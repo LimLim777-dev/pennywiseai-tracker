@@ -92,6 +92,19 @@ interface TransactionDao {
 
     @Query("SELECT DISTINCT merchant_name FROM transactions WHERE is_deleted = 0 ORDER BY merchant_name ASC")
     fun getAllMerchants(): Flow<List<String>>
+
+    /**
+     * Merchants ranked by how often they've been used — the ordering an
+     * autocomplete wants (your regular kopitiam beats a one-off shop that
+     * happens to sort earlier alphabetically).
+     */
+    @Query("""
+        SELECT merchant_name FROM transactions
+        WHERE is_deleted = 0 AND merchant_name != ''
+        GROUP BY merchant_name
+        ORDER BY COUNT(*) DESC, MAX(date_time) DESC
+    """)
+    fun getMerchantsByUsage(): Flow<List<String>>
     
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTransaction(transaction: TransactionEntity): Long

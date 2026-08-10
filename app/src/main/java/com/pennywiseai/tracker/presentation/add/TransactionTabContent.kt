@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.*
@@ -87,6 +88,13 @@ fun TransactionTabContent(
         if (uiState.amount.isEmpty()) amountFocusRequester.requestFocus()
     }
 
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val merchantHistory by viewModel.merchantHistory.collectAsState()
+    var merchantFieldFocused by remember { mutableStateOf(false) }
+    val merchantSuggestions = remember(uiState.merchant, merchantHistory) {
+        filterMerchantSuggestions(uiState.merchant, merchantHistory)
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -155,18 +163,46 @@ fun TransactionTabContent(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(1.5.dp)
             ) {
-                TextField(
-                    value = uiState.merchant,
-                    onValueChange = viewModel::updateTransactionMerchant,
-                    label = { Text("Merchant", fontWeight = FontWeight.SemiBold) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = topShape,
-                    leadingIcon = { Icon(Icons.Default.Store, contentDescription = null) },
-                    isError = uiState.merchantError != null,
-                    supportingText = uiState.merchantError?.let { { Text(it) } },
-                    colors = filledFieldColors()
-                )
+                // Merchant with autocomplete over previously-used names —
+                // manual entry is mostly re-typing places you've been before.
+                ExposedDropdownMenuBox(
+                    expanded = merchantSuggestions.isNotEmpty() && merchantFieldFocused,
+                    onExpandedChange = { }
+                ) {
+                    TextField(
+                        value = uiState.merchant,
+                        onValueChange = viewModel::updateTransactionMerchant,
+                        label = { Text("Merchant", fontWeight = FontWeight.SemiBold) },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(MenuAnchorType.PrimaryEditable)
+                            .onFocusChanged { merchantFieldFocused = it.isFocused },
+                        shape = topShape,
+                        leadingIcon = { Icon(Icons.Default.Store, contentDescription = null) },
+                        isError = uiState.merchantError != null,
+                        supportingText = uiState.merchantError?.let { { Text(it) } },
+                        colors = filledFieldColors()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = merchantSuggestions.isNotEmpty() && merchantFieldFocused,
+                        onDismissRequest = { merchantFieldFocused = false }
+                    ) {
+                        merchantSuggestions.forEach { suggestion ->
+                            DropdownMenuItem(
+                                text = { Text(suggestion) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.History, contentDescription = null)
+                                },
+                                onClick = {
+                                    viewModel.updateTransactionMerchant(suggestion)
+                                    merchantFieldFocused = false
+                                    focusManager.clearFocus()
+                                }
+                            )
+                        }
+                    }
+                }
 
                 TextField(
                     value = uiState.notes,

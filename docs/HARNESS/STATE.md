@@ -36,6 +36,18 @@ building new pipeline-dependent features.
 
 ## Open items (unblocked)
 
+- **Twenty-sixth batch DONE 2026-07-08** (user request): (46)
+  **Merchant autocomplete on manual add** — typing one character drops
+  a suggestion list of previously-used merchants. New DAO query
+  `getMerchantsByUsage()` (GROUP BY merchant, COUNT DESC, then most
+  recent) so regulars outrank alphabetically-early one-offs; pure
+  `filterMerchantSuggestions()` ranks prefix hits above mid-string
+  ones, case-insensitive, exact match suggests nothing, capped at 6 —
+  8 unit tests. UI: ExposedDropdownMenuBox around the merchant field,
+  open only while focused, History icon per row. Pairs with the
+  amount-autofocus item: manual entry (UOB tap-to-pay) is now
+  amount → merchant-in-one-tap.
+
 - **Twenty-fifth batch DONE 2026-07-08** (user-reported: "bank-app
   payments only get captured if I open PennyWise first, and I want a
   notification to fix merchant/description"): (45) **captured-transaction

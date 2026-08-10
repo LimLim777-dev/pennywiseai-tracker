@@ -174,6 +174,15 @@ class AddViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    // Previously-used merchants (usage-ranked) backing the merchant
+    // autocomplete — manual entry is mostly re-entering places you've been.
+    val merchantHistory = transactionRepository.getMerchantsByUsage()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     val activeBudgetCategories = budgetGroupRepository.getActiveGroups()
         .map { groups ->
             groups.map { it.categories.map { cat -> cat.categoryName } }.flatten().distinct().sorted()
